@@ -1,0 +1,14 @@
+crop_id,etc_in,location,source_crop,reference_id
+alfalfa,37.1,"Greeley, Colorado",Alfalfa,csu-seasonal-et
+barley,20.6,"Greeley, Colorado",Spring grains,csu-seasonal-et
+wheat,17.9,"Greeley, Colorado","Wheat, winter",csu-seasonal-et
+corn_grain,23.9,"Greeley, Colorado","Corn, grain",csu-seasonal-et
+corn_silage,22.9,"Greeley, Colorado","Corn, silage",csu-seasonal-et
+corn_sweet,21.9,"Greeley, Colorado","Corn, sweet",csu-seasonal-et
+dry_bean,15.7,"Greeley, Colorado",Dry beans,csu-seasonal-et
+cantaloupe,17.2,"Greeley, Colorado",Cantaloupe,csu-seasonal-et
+potato,20.2,"Greeley, Colorado",Potatoes,csu-seasonal-et
+onion,24.2,"Greeley, Colorado",Onion,csu-seasonal-et
+sorghum,20.9,"Greeley, Colorado","Sorghum, grain",csu-seasonal-et
+soybean,18.7,"Greeley, Colorado",Soybeans,csu-seasonal-et
+sugar_beet,27.1,"Greeley, Colorado",Sugar beets,csu-seasonal-et

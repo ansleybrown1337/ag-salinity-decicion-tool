@@ -1,0 +1,68 @@
+{
+  "maas-hoffman": {
+    "authors": "Maas, E. V., & Hoffman, G. J.",
+    "title": "Crop salt tolerance: Current assessment",
+    "year": 1977,
+    "publication": "Journal of the Irrigation and Drainage Division, 103(2), 115–134",
+    "doi": "10.1061/JRCEA4.0001137",
+    "url": "https://doi.org/10.1061/JRCEA4.0001137",
+    "supports": ["Threshold–slope crop response"]
+  },
+  "fao61-crops": {
+    "authors": "Tanji, K. K., & Kielen, N. C.",
+    "title": "Agricultural drainage water management in arid and semi-arid areas",
+    "year": 2002,
+    "publication": "FAO Irrigation and Drainage Paper 61, Annex 1, Table A1.1",
+    "url": "https://www.fao.org/4/y4263e/y4263e0e.htm",
+    "supports": ["Crop tolerance coefficients and production endpoints"]
+  },
+  "maas-grattan": {
+    "authors": "Maas, E. V., & Grattan, S. R.",
+    "title": "Crop yields as affected by salinity",
+    "year": 1999,
+    "publication": "In R. W. Skaggs & J. van Schilfgaarde (Eds.), Agricultural drainage, Agronomy Monograph 38, pp. 55–108",
+    "doi": "10.2134/agronmonogr38.c3",
+    "url": "https://doi.org/10.2134/agronmonogr38.c3",
+    "supports": ["Original compilation reproduced in FAO Paper 61, Annex 1"]
+  },
+  "fao29": {
+    "authors": "Ayers, R. S., & Westcot, D. W.",
+    "title": "Water quality for agriculture",
+    "year": 1985,
+    "publication": "FAO Irrigation and Drainage Paper 29 Rev. 1, section 2.4",
+    "url": "https://www.fao.org/4/T0234e/T0234E03.htm",
+    "supports": ["Maintenance leaching requirement", "Worked examples", "Potential credit for existing leaching"]
+  },
+  "fao61-balance": {
+    "authors": "Tanji, K. K., & Kielen, N. C.",
+    "title": "Agricultural drainage water management in arid and semi-arid areas",
+    "year": 2002,
+    "publication": "FAO Irrigation and Drainage Paper 61, Annex 4",
+    "url": "https://www.fao.org/4/Y4263E/y4263e0h.htm",
+    "supports": ["Root-zone water and salt balance", "Mixing and bypass limitations"]
+  },
+  "osu-efficiency": {
+    "authors": "Zamora Re, M. I., Peplin, T. M., & Tomasek, A.",
+    "title": "Irrigation water scheduling",
+    "year": 2026,
+    "publication": "Oregon State University Extension, EM 9717, Management Technical Guide 8",
+    "url": "https://extension.oregonstate.edu/catalog/em-9717-irrigation-water-scheduling",
+    "supports": ["Typical application efficiency ranges and definition"]
+  },
+  "csu-seasonal-et": {
+    "authors": "Schneekloth, J., & Andales, A.",
+    "title": "Seasonal water needs and opportunities for limited irrigation for Colorado crops",
+    "year": 2017,
+    "publication": "Colorado State University Extension, Table 1, Greeley column",
+    "url": "https://extension.colostate.edu/resource/seasonal-water-needs-and-opportunities-for-limited-irrigation-for-colorado-crops/",
+    "supports": ["Editable location-specific seasonal crop ET starting estimates"]
+  },
+  "fao56": {
+    "authors": "Allen, R. G., Pereira, L. S., Raes, D., & Smith, M.",
+    "title": "Crop evapotranspiration: Guidelines for computing crop water requirements",
+    "year": 1998,
+    "publication": "FAO Irrigation and Drainage Paper 56",
+    "url": "https://www.fao.org/4/x0490e/x0490e00.htm",
+    "supports": ["ETc terminology and reference for future ET estimation"]
+  }
+}

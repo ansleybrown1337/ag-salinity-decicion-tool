@@ -1,0 +1,6 @@
+id,label,low_pct,high_pct,reference_id
+drip,Surface/subsurface drip,85,95,osu-efficiency
+pivot,Center pivot (low pressure),75,90,osu-efficiency
+furrow,Furrow,60,80,osu-efficiency
+level_border,Level border,60,80,osu-efficiency
+wild_flood,Wild flood,25,40,osu-efficiency

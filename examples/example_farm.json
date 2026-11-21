@@ -1,0 +1,363 @@
+{
+  "schema_version": "2.0",
+  "app_version": "0.1.1",
+  "farm_name": "Dry Creek Demonstration Farm",
+  "planning_year": 2026,
+  "notes": "Hypothetical fields, water sources, and seasonal water inputs.",
+  "active_scenario_id": "baseline",
+  "scenarios": [
+    {
+      "id": "baseline",
+      "name": "Baseline",
+      "fields": [
+        {
+          "id": "North Bench",
+          "acres": 65.0,
+          "crop": {
+            "id": "barley",
+            "label": "Barley, grain",
+            "scientific_name": "Hordeum vulgare L.",
+            "endpoint": "Grain yield",
+            "threshold_ds_m": 8.0,
+            "slope_pct_per_ds_m": 5.0,
+            "threshold_origin": "Published default",
+            "slope_origin": "Published default",
+            "reference_id": "fao61-crops"
+          },
+          "current_ece_ds_m": 4.2,
+          "irrigation": {
+            "id": "furrow",
+            "label": "Furrow",
+            "efficiency_pct": 70.0,
+            "efficiency_origin": "Published default",
+            "published_range_pct": [
+              60.0,
+              80.0
+            ],
+            "reference_id": "osu-efficiency"
+          },
+          "source_id": "Bench Canal",
+          "desired_yield_pct": 90.0,
+          "target_ece_ds_m": 10.0,
+          "target_ece_override": false,
+          "etc_in": 22.0,
+          "et_estimate": null,
+          "effective_rain_in": 5.0,
+          "leaching_credit_pct": 0.0,
+          "notes": ""
+        },
+        {
+          "id": "Creek Flat",
+          "acres": 48.0,
+          "crop": {
+            "id": "alfalfa",
+            "label": "Alfalfa",
+            "scientific_name": "Medicago sativa L.",
+            "endpoint": "Shoot dry weight",
+            "threshold_ds_m": 2.0,
+            "slope_pct_per_ds_m": 7.3,
+            "threshold_origin": "Published default",
+            "slope_origin": "Published default",
+            "reference_id": "fao61-crops"
+          },
+          "current_ece_ds_m": 4.7,
+          "irrigation": {
+            "id": "pivot",
+            "label": "Center pivot (low pressure)",
+            "efficiency_pct": 82.5,
+            "efficiency_origin": "Published default",
+            "published_range_pct": [
+              75.0,
+              90.0
+            ],
+            "reference_id": "osu-efficiency"
+          },
+          "source_id": "Bench Canal",
+          "desired_yield_pct": 90.0,
+          "target_ece_ds_m": 3.3698630136986303,
+          "target_ece_override": false,
+          "etc_in": 34.0,
+          "et_estimate": null,
+          "effective_rain_in": 5.0,
+          "leaching_credit_pct": 0.0,
+          "notes": ""
+        },
+        {
+          "id": "East Bench",
+          "acres": 36.0,
+          "crop": {
+            "id": "corn_silage",
+            "label": "Corn, silage",
+            "scientific_name": "Zea mays L.",
+            "endpoint": "Shoot dry weight",
+            "threshold_ds_m": 1.8,
+            "slope_pct_per_ds_m": 7.4,
+            "threshold_origin": "Published default",
+            "slope_origin": "Published default",
+            "reference_id": "fao61-crops"
+          },
+          "current_ece_ds_m": 4.8,
+          "irrigation": {
+            "id": "pivot",
+            "label": "Center pivot (low pressure)",
+            "efficiency_pct": 85.0,
+            "efficiency_origin": "User override",
+            "published_range_pct": [
+              75.0,
+              90.0
+            ],
+            "reference_id": "osu-efficiency"
+          },
+          "source_id": "East Well",
+          "desired_yield_pct": 90.0,
+          "target_ece_ds_m": 3.1513513513513516,
+          "target_ece_override": false,
+          "etc_in": 27.0,
+          "et_estimate": null,
+          "effective_rain_in": 4.0,
+          "leaching_credit_pct": 25.0,
+          "notes": "Illustrative leaching credit for sensitivity analysis."
+        }
+      ],
+      "sources": [
+        {
+          "id": "Bench Canal",
+          "delivery_af": 351.0,
+          "ecw_ds_m": 0.7,
+          "source_type": "Canal water",
+          "notes": ""
+        },
+        {
+          "id": "East Well",
+          "delivery_af": 70.0,
+          "ecw_ds_m": 2.3,
+          "source_type": "Groundwater",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "barley-alternative",
+      "name": "Barley on East Bench",
+      "fields": [
+        {
+          "id": "North Bench",
+          "acres": 65.0,
+          "crop": {
+            "id": "barley",
+            "label": "Barley, grain",
+            "scientific_name": "Hordeum vulgare L.",
+            "endpoint": "Grain yield",
+            "threshold_ds_m": 8.0,
+            "slope_pct_per_ds_m": 5.0,
+            "threshold_origin": "Published default",
+            "slope_origin": "Published default",
+            "reference_id": "fao61-crops"
+          },
+          "current_ece_ds_m": 4.2,
+          "irrigation": {
+            "id": "furrow",
+            "label": "Furrow",
+            "efficiency_pct": 70.0,
+            "efficiency_origin": "Published default",
+            "published_range_pct": [
+              60.0,
+              80.0
+            ],
+            "reference_id": "osu-efficiency"
+          },
+          "source_id": "Bench Canal",
+          "desired_yield_pct": 90.0,
+          "target_ece_ds_m": 10.0,
+          "target_ece_override": false,
+          "etc_in": 22.0,
+          "et_estimate": null,
+          "effective_rain_in": 5.0,
+          "leaching_credit_pct": 0.0,
+          "notes": ""
+        },
+        {
+          "id": "Creek Flat",
+          "acres": 48.0,
+          "crop": {
+            "id": "alfalfa",
+            "label": "Alfalfa",
+            "scientific_name": "Medicago sativa L.",
+            "endpoint": "Shoot dry weight",
+            "threshold_ds_m": 2.0,
+            "slope_pct_per_ds_m": 7.3,
+            "threshold_origin": "Published default",
+            "slope_origin": "Published default",
+            "reference_id": "fao61-crops"
+          },
+          "current_ece_ds_m": 4.7,
+          "irrigation": {
+            "id": "pivot",
+            "label": "Center pivot (low pressure)",
+            "efficiency_pct": 82.5,
+            "efficiency_origin": "Published default",
+            "published_range_pct": [
+              75.0,
+              90.0
+            ],
+            "reference_id": "osu-efficiency"
+          },
+          "source_id": "Bench Canal",
+          "desired_yield_pct": 90.0,
+          "target_ece_ds_m": 3.3698630136986303,
+          "target_ece_override": false,
+          "etc_in": 34.0,
+          "et_estimate": null,
+          "effective_rain_in": 5.0,
+          "leaching_credit_pct": 0.0,
+          "notes": ""
+        },
+        {
+          "id": "East Bench",
+          "acres": 36.0,
+          "crop": {
+            "id": "barley",
+            "label": "Barley, grain",
+            "scientific_name": "Hordeum vulgare L.",
+            "endpoint": "Grain yield",
+            "threshold_ds_m": 8.0,
+            "slope_pct_per_ds_m": 5.0,
+            "threshold_origin": "Published default",
+            "slope_origin": "Published default",
+            "reference_id": "fao61-crops"
+          },
+          "current_ece_ds_m": 4.8,
+          "irrigation": {
+            "id": "pivot",
+            "label": "Center pivot (low pressure)",
+            "efficiency_pct": 85.0,
+            "efficiency_origin": "User override",
+            "published_range_pct": [
+              75.0,
+              90.0
+            ],
+            "reference_id": "osu-efficiency"
+          },
+          "source_id": "East Well",
+          "desired_yield_pct": 90.0,
+          "target_ece_ds_m": 10.0,
+          "target_ece_override": false,
+          "etc_in": 22.0,
+          "et_estimate": null,
+          "effective_rain_in": 4.0,
+          "leaching_credit_pct": 25.0,
+          "notes": ""
+        }
+      ],
+      "sources": [
+        {
+          "id": "Bench Canal",
+          "delivery_af": 351.0,
+          "ecw_ds_m": 0.7,
+          "source_type": "Canal water",
+          "notes": ""
+        },
+        {
+          "id": "East Well",
+          "delivery_af": 70.0,
+          "ecw_ds_m": 2.3,
+          "source_type": "Groundwater",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "references": {
+    "maas-hoffman": {
+      "authors": "Maas, E. V., & Hoffman, G. J.",
+      "title": "Crop salt tolerance: Current assessment",
+      "year": 1977,
+      "publication": "Journal of the Irrigation and Drainage Division, 103(2), 115–134",
+      "url": "https://doi.org/10.1061/JRCEA4.0001137",
+      "doi": "10.1061/JRCEA4.0001137",
+      "supports": [
+        "Threshold–slope crop response"
+      ]
+    },
+    "fao61-crops": {
+      "authors": "Tanji, K. K., & Kielen, N. C.",
+      "title": "Agricultural drainage water management in arid and semi-arid areas",
+      "year": 2002,
+      "publication": "FAO Irrigation and Drainage Paper 61, Annex 1, Table A1.1",
+      "url": "https://www.fao.org/4/y4263e/y4263e0e.htm",
+      "doi": null,
+      "supports": [
+        "Crop tolerance coefficients and production endpoints"
+      ]
+    },
+    "maas-grattan": {
+      "authors": "Maas, E. V., & Grattan, S. R.",
+      "title": "Crop yields as affected by salinity",
+      "year": 1999,
+      "publication": "In R. W. Skaggs & J. van Schilfgaarde (Eds.), Agricultural drainage, Agronomy Monograph 38, pp. 55–108",
+      "url": "https://doi.org/10.2134/agronmonogr38.c3",
+      "doi": "10.2134/agronmonogr38.c3",
+      "supports": [
+        "Original compilation reproduced in FAO Paper 61, Annex 1"
+      ]
+    },
+    "fao29": {
+      "authors": "Ayers, R. S., & Westcot, D. W.",
+      "title": "Water quality for agriculture",
+      "year": 1985,
+      "publication": "FAO Irrigation and Drainage Paper 29 Rev. 1, section 2.4",
+      "url": "https://www.fao.org/4/T0234e/T0234E03.htm",
+      "doi": null,
+      "supports": [
+        "Maintenance leaching requirement",
+        "Worked examples",
+        "Potential credit for existing leaching"
+      ]
+    },
+    "fao61-balance": {
+      "authors": "Tanji, K. K., & Kielen, N. C.",
+      "title": "Agricultural drainage water management in arid and semi-arid areas",
+      "year": 2002,
+      "publication": "FAO Irrigation and Drainage Paper 61, Annex 4",
+      "url": "https://www.fao.org/4/Y4263E/y4263e0h.htm",
+      "doi": null,
+      "supports": [
+        "Root-zone water and salt balance",
+        "Mixing and bypass limitations"
+      ]
+    },
+    "osu-efficiency": {
+      "authors": "Zamora Re, M. I., Peplin, T. M., & Tomasek, A.",
+      "title": "Irrigation water scheduling",
+      "year": 2026,
+      "publication": "Oregon State University Extension, EM 9717, Management Technical Guide 8",
+      "url": "https://extension.oregonstate.edu/catalog/em-9717-irrigation-water-scheduling",
+      "doi": null,
+      "supports": [
+        "Typical application efficiency ranges and definition"
+      ]
+    },
+    "csu-seasonal-et": {
+      "authors": "Schneekloth, J., & Andales, A.",
+      "title": "Seasonal water needs and opportunities for limited irrigation for Colorado crops",
+      "year": 2017,
+      "publication": "Colorado State University Extension, Table 1, Greeley column",
+      "url": "https://extension.colostate.edu/resource/seasonal-water-needs-and-opportunities-for-limited-irrigation-for-colorado-crops/",
+      "doi": null,
+      "supports": [
+        "Editable location-specific seasonal crop ET starting estimates"
+      ]
+    },
+    "fao56": {
+      "authors": "Allen, R. G., Pereira, L. S., Raes, D., & Smith, M.",
+      "title": "Crop evapotranspiration: Guidelines for computing crop water requirements",
+      "year": 1998,
+      "publication": "FAO Irrigation and Drainage Paper 56",
+      "url": "https://www.fao.org/4/x0490e/x0490e00.htm",
+      "doi": null,
+      "supports": [
+        "ETc terminology and reference for future ET estimation"
+      ]
+    }
+  }
+}

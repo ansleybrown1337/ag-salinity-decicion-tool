@@ -1,0 +1,14 @@
+id,label,scientific_name,endpoint,threshold_ds_m,slope_pct_per_ds_m,reference_id
+barley,"Barley, grain",Hordeum vulgare L.,Grain yield,8.0,5.0,fao61-crops
+wheat,"Wheat, winter",Triticum aestivum L.,Grain yield,6.0,7.1,fao61-crops
+alfalfa,Alfalfa,Medicago sativa L.,Shoot dry weight,2.0,7.3,fao61-crops
+corn_grain,"Corn, grain",Zea mays L.,Grain yield,1.9,26.0,fao61-crops
+corn_silage,"Corn, silage",Zea mays L.,Shoot dry weight,1.8,7.4,fao61-crops
+corn_sweet,"Corn, sweet",Zea mays L.,Ear fresh weight,1.7,12.0,fao61-crops
+dry_bean,Dry bean,Phaseolus vulgaris L.,Seed yield,1.0,19.0,fao61-crops
+cantaloupe,Cantaloupe,Cucumis melo L. (Reticulatus Group),Fruit yield,1.0,8.4,fao61-crops
+potato,Potato,Solanum tuberosum L.,Tuber yield,1.7,12.0,fao61-crops
+onion,"Onion, bulb",Allium cepa L.,Bulb yield,1.2,16.0,fao61-crops
+sorghum,"Sorghum, grain",Sorghum bicolor (L.) Moench,Grain yield,6.8,16.0,fao61-crops
+soybean,Soybean,Glycine max (L.) Merr.,Seed yield,5.0,20.0,fao61-crops
+sugar_beet,Sugar beet,Beta vulgaris L.,Storage root yield,7.0,5.9,fao61-crops

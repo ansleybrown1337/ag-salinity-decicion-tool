@@ -30,7 +30,7 @@ cd <cloned-directory>
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python -m streamlit run app.py
+python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
 If using a standalone Python installation, replace `py -3.12` with the path to its Python 3.12 executable. If PowerShell blocks activation, run the install and launch commands with `.\.venv\Scripts\python.exe` in place of `python`.
@@ -41,10 +41,10 @@ If using a standalone Python installation, replace `py -3.12` with the path to i
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python -m streamlit run app.py
+python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
-Open [Ag Salinity Manager on localhost](http://127.0.0.1:8501). Run Streamlit from the repository root to load the theme and local server settings. First-time dependency installation typically needs internet access. The app uses local calculation and report generation, loopback binding, and disabled Streamlit usage telemetry.
+Open [Ag Salinity Manager on localhost](http://127.0.0.1:8501). Run Streamlit from the repository root to load the theme and local server settings. The commands above restrict the listener to loopback for local use. Streamlit Community Cloud manages the listener for hosted deployments. First-time dependency installation typically needs internet access. Calculations and reports run inside the app, and the project configuration disables Streamlit usage telemetry.
 
 ## Farm planning guide
 

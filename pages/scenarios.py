@@ -13,7 +13,11 @@ from ui.field_controls import choose_alternative_crop
 from ui.shared import ET_HELP, download_farm_plan, errors_panel, heading, plain_text, scenario_caption, selected_table_row
 from ui.state import activate, as_draft, identifier, ui_key, validate_scenario, validated_plan, workspace
 
-heading("Scenario Comparison", "Compare whole-farm water demand for your saved plan and alternative crop choices.")
+heading(
+    "Scenario Comparison",
+    "Compare whole-farm water demand for your saved plan and alternative crop choices.",
+    banner="scenario-comparison",
+)
 scenario_caption()
 state = workspace()
 scenarios = state["scenarios"]
@@ -99,7 +103,7 @@ if comparison:
         st.rerun()
     open_pressed = open_setup.button(
         "Open in Farm Setup", disabled=selected is None, width="stretch",
-        help="Use Farm Setup and Water Supply for detailed changes.",
+        help="Use Farm Setup for detailed changes to fields and water sources.",
     )
     if open_pressed and selected is not None:
         activate(selected)

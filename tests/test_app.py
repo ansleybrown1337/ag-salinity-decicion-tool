@@ -37,7 +37,14 @@ def resume_workspace(app):
 def test_first_review_reports_incomplete_setup():
     app = AppTest.from_file(str(ROOT / "app.py")).run()
     assert app.title[0].value == "Farm Setup"
-    app.switch_page("pages/water_supply.py").run()
+    app.switch_page("pages/farm_dashboard.py").run()
+    assert app.title[0].value == "Farm Dashboard"
+    guide = next(item.value for item in app.markdown if "**Add your fields in Farm Setup.**" in item.value)
+    assert "**Add water sources and assign fields.**" in guide
+    assert "**Review your farm plan.**" in guide
+    assert not app.warning
+    assert not app.metric
+    app.switch_page("pages/farm_setup.py").run()
     button(app, "Review and Calculate Farm Plan").click().run()
     assert "Add at least one field" in app.error[0].value
     assert "Add at least one water source" in app.error[0].value
@@ -50,7 +57,7 @@ def test_demo_renders_all_pages_and_field_preview_preserves_saved_plan():
     assert app.session_state.workspace["farm_name"] == "Dry Creek Demonstration Farm"
     app = resume_workspace(app)
     for path, title in (
-        ("water_supply", "Water Supply"), ("scenarios", "Scenario Comparison"), ("about", "About & Methods"),
+        ("scenarios", "Scenario Comparison"), ("about", "About & Methods"),
         ("field_decisions", "Field Decisions"), ("farm_dashboard", "Farm Dashboard"),
     ):
         app.switch_page(f"pages/{path}.py").run()
@@ -119,7 +126,7 @@ def test_setup_adds_field_with_crop_estimate_then_assigns_water():
     assert fields[0]["desired_yield_pct"] == 100.0
     assert fields[0]["target_ece_ds_m"] == fields[0]["crop"]["threshold_ds_m"]
 
-    app = resume_workspace(app).switch_page("pages/water_supply.py").run()
+    app = resume_workspace(app)
     widget(app.text_input, "Water source ID").set_value("East Well")
     widget(app.number_input, "Expected farm delivery (acre-feet)").set_value(150.0)
     widget(app.number_input, "Water salinity (ECw, dS/m)").set_value(1.2)
@@ -128,9 +135,9 @@ def test_setup_adds_field_with_crop_estimate_then_assigns_water():
     scenario = app.session_state.workspace["scenarios"]["baseline"]
     assert scenario["fields"][0]["source_id"] == "East Well"
     assert scenario["sources"][0]["delivery_af"] == 150.0
-    app = resume_workspace(app).switch_page("pages/water_supply.py").run()
+    app = resume_workspace(app)
     button(app, "Review and Calculate Farm Plan").click().run()
-    app.switch_page("pages/farm_dashboard.py").run()
+    assert app.title[0].value == "Farm Dashboard"
     assert any(item.value == "150.0 AF" for item in app.metric)
     assert not app.exception
 
@@ -163,7 +170,7 @@ def test_saved_field_can_be_edited_and_deleted_from_table_controls():
 def test_deleting_source_unassigns_its_fields_in_the_active_scenario():
     app = AppTest.from_file(str(ROOT / "app.py")).run()
     button(app, "Load demonstration farm").click().run()
-    app = resume_workspace(app).switch_page("pages/water_supply.py").run()
+    app = resume_workspace(app)
     assert button(app, "Delete water source").proto.disabled
     select_table_row(app, "saved-sources-table/0", 0, "Delete water source")
 

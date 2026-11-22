@@ -10,6 +10,7 @@ backgroundColor = "#0D3439"
 secondaryBackgroundColor = "#234B4F"
 textColor = "#FFFFFF"
 primaryColor = "#B7DBD1"
+linkColor = "#B7DBD1"
 
 [browser]
 gatherUsageStats = false
@@ -17,3 +18,4 @@ gatherUsageStats = false
 [server]
 address = "127.0.0.1"
 maxUploadSize = 10
+enableStaticServing = true

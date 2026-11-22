@@ -3,15 +3,17 @@ message: "If you use this software, please cite it using the metadata below."
 title: "Ag Salinity Manager"
 type: software
 authors:
-  - name: "AgriData Solutions, LLC"
+  - given-names: "A. J."
+    family-names: "Brown"
 version: "0.1.1"
 license: GPL-2.0-or-later
 preferred-citation:
   type: software
   title: "Ag Salinity Manager"
   authors:
-    - name: "AgriData Solutions, LLC"
+    - given-names: "A. J."
+      family-names: "Brown"
   version: "0.1.1"
   year: 2026
 # Verify the public release date before adding date-released.
-# Confirm organization attribution and add repository-code after publication.
+# Add repository-code after publication.

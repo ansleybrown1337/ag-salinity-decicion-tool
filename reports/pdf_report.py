@@ -12,7 +12,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import CondPageBreak, Image, LongTable, PageBreak, Paragraph, SimpleDocTemplate, Spacer, TableStyle
 
 from config.branding import (
-    BROWN, COMPANY, COPYRIGHT, DARK_GREEN, LICENSE, LIGHT_GREEN, PALE_GREEN, ROOT, TITLE, VERSION, WHITE, logo_path,
+    BROWN, COPYRIGHT, CREATOR, CREATOR_URL, DARK_GREEN, LICENSE, LIGHT_GREEN, PALE_GREEN, ROOT, TITLE, VERSION, WHITE,
+    logo_path,
 )
 from data.catalog import REFERENCES
 
@@ -54,7 +55,7 @@ def management_report(farm_name, year, notes, scenario, result, references, *, g
     generated = generated or date.today()
     output = BytesIO()
     doc = SimpleDocTemplate(
-        output, pagesize=letter, title=f"{TITLE} - {farm_name}", author=COMPANY,
+        output, pagesize=letter, title=f"{TITLE} - {farm_name}", author=CREATOR,
         leftMargin=43, rightMargin=43, topMargin=41, bottomMargin=54,
     )
     green = colors.HexColor(DARK_GREEN)
@@ -86,7 +87,10 @@ def management_report(farm_name, year, notes, scenario, result, references, *, g
         image = Image(str(logo), width=140, height=52, kind="proportional", hAlign="LEFT")
         story.extend([image, Spacer(1, 12)])
     paragraph(TITLE, title)
-    paragraph(f"Management report  |  Version {VERSION}  |  {COMPANY}")
+    story.append(Paragraph(
+        f"Management report  |  Version {VERSION}  |  Created by "
+        f"<link href={quoteattr(CREATOR_URL)} color={quoteattr(BROWN)}>{escape(CREATOR)}</link>", body,
+    ))
     paragraph(farm_name, h1)
     paragraph(f"{year} planning year  |  Scenario: {scenario.name}  |  Generated {generated.isoformat()}")
     table(["Farm summary", "Planning result"], [

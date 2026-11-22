@@ -1,6 +1,6 @@
 # Ag Salinity Manager
 
-**Version 0.1.1 · AgriData Solutions, LLC**
+**Version 0.1.1** · Created by [AJ Brown, PhD](https://sites.google.com/view/ansleyjbrown)
 
 Ag Salinity Manager helps producers, irrigation managers, Extension professionals, conservation planners, consultants, and researchers assess whether expected irrigation deliveries can support a proposed cropping plan and a maintenance salinity objective. It combines field area, crop water use, soil and irrigation water salinity, and field application efficiency. It reports conditional planning estimates and identifies where assigned water supplies or current soil salinity warrant further assessment.
 
@@ -50,16 +50,16 @@ Open [Ag Salinity Manager on localhost](http://127.0.0.1:8501). Run Streamlit fr
 
 1. In **Farm Setup**, enter a farm name and planning year. Fill in **Field details**, then select **Add field**. To change or remove a field, select its row in **Saved fields**, then select **Edit field** or **Delete field**.
 2. Use a single field ID you recognize, such as North Pivot. Enter acreage, current soil ECe, crop, and irrigation method. Adjust the suggested seasonal crop ET for local conditions and enter effective rain if applicable.
-3. In **Water Supply**, enter a source ID, representative ECw, and **Expected farm delivery** in acre-feet (AF) after upstream losses. Select the fields it irrigates and choose **Add water source**. Select a saved source row to edit or delete it. Deleting a source clears its field assignments. Selecting a field already assigned elsewhere moves it to the source being saved.
+3. Under **Add water sources and assign fields** in **Farm Setup**, enter a source ID, representative ECw, and **Expected farm delivery** in acre-feet (AF) after upstream losses. Select the fields it irrigates and choose **Add water source**. Select a saved source row to edit or delete it. Deleting a source clears its field assignments. Selecting a field already assigned elsewhere moves it to the source being saved.
 4. Expand **Advanced field settings** for crop coefficient and efficiency overrides, custom crops or methods, desired yield, a manual maintenance ECe target, and the effective leaching credit. New fields start with a 100% desired relative yield and zero leaching credit. Hover the question-mark icons for definitions and source links.
-5. Select **Review and Calculate Farm Plan** on **Water Supply**. Review the **Farm Dashboard** for source-specific shortfalls, the combined field balance, and field warnings. After review, the dashboard uses your latest saved entries.
-6. Open **Field Decisions** and pick a field. Choose a crop to try or adjust the seasonal ET, desired yield, application efficiency, and leaching credit. The saved curve stays visible alongside the what-if curve. Add other fields to the stacked irrigation chart as needed. Use **Farm Setup** to make a permanent field edit.
+5. Select **Review and Calculate Farm Plan** in **Farm Setup**. Review the **Farm Dashboard** for source-specific shortfalls, the combined field balance, and field warnings. After review, the dashboard uses your latest saved entries.
+6. Open **Field Decisions** and pick a field by name in the sidebar. Choose a crop to try or adjust the seasonal ET, desired yield, application efficiency, and leaching credit. The saved curve stays visible alongside the what-if curve. Add other fields to the stacked irrigation chart as needed. Use **Farm Setup** to make a permanent field edit.
 7. In **Scenario Comparison**, select **Add new scenario**, give it a name, and choose crops and seasonal ET for its fields. Select **Save scenario** to include it in the whole-farm comparison. Select an alternative scenario’s row to edit or delete it, or choose **Open in Farm Setup** for broader changes.
 8. Download **Farm Plan (.json)** to resume planning with all scenarios in a new session. The filename includes the model version, local date and time, and UTC offset. Download **Management Report (PDF)** for a printable record of the active scenario. Export **Field Results (.csv)** for downstream analysis. Loading a plan replaces the session’s current inputs.
 
 ## Demonstration farm
 
-At the bottom of **Farm Setup**, expand **Load an existing farm plan or try the demonstration (optional)** and select **Load demonstration farm**, or upload [examples/example_farm.json](examples/example_farm.json). This hypothetical farm uses three fields and two independent water sources across 149 acres. Expected farm deliveries are 351 AF from Bench Canal and 70 AF from East Well.
+At the bottom of **Farm Setup**, select **Load demonstration farm** or upload [examples/example_farm.json](examples/example_farm.json). This hypothetical farm uses three fields and two independent water sources across 149 acres. Expected farm deliveries are 351 AF from Bench Canal and 70 AF from East Well.
 
 | Scenario | Field demand (AF) | Field-deliverable supply (AF) | Combined field balance (AF) | East Well balance (AF) |
 | --- | ---: | ---: | ---: | ---: |
@@ -127,7 +127,7 @@ This excerpt illustrates the structure. The linked example is a complete importa
 }
 ```
 
-Upload a complete JSON file under **Farm Setup** and select **Load uploaded plan**. Invalid files retain the current session and display validation messages. Download the JSON before closing the session. Keep files containing actual farm data out of version control.
+Use **Upload a farm plan (.json)** at the bottom of **Farm Setup** to open a saved plan. Invalid files retain the current session and display validation messages. Download the JSON before closing the session. Keep files containing actual farm data out of version control.
 
 ## Repository structure
 
@@ -139,7 +139,8 @@ Upload a complete JSON file under **Farm Setup** and select **Load uploaded plan
 | `data/`, `docs/` | Published presets, scientific references, methods, and dependency review |
 | `reports/` | In-memory ReportLab management PDF |
 | `examples/`, `tests/` | Demonstration plan and automated checks |
-| `config/`, `.streamlit/`, `assets/` | Branding configuration, local app settings, and optional assets |
+| `config/`, `.streamlit/`, `assets/` | Branding configuration, local app settings, and optional logo |
+| `static/banners/` | Locally served page banners with [image credits and prompts](docs/banner-images.md) |
 
 ## Development and testing
 
@@ -187,6 +188,6 @@ Report issues and propose improvements in the repository’s issue tracker once 
 
 ## Software citation
 
-AgriData Solutions, LLC. (2026). *Ag Salinity Manager* (Version 0.1.1) [Computer software].
+Brown, A. J. (2026). *Ag Salinity Manager* (Version 0.1.1) [Computer software].
 
 See [CITATION.cff](CITATION.cff). Confirm the organization citation and add the repository URL before publication. A DOI has not been assigned.

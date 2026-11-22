@@ -7,7 +7,7 @@ from io import BytesIO
 from PIL import Image
 from pypdf import PdfReader
 
-from config.branding import BROWN, COPYRIGHT, DARK_GREEN, LICENSE, LIGHT_GREEN
+from config.branding import BROWN, COPYRIGHT, CREATOR, CREATOR_URL, DARK_GREEN, LICENSE, LIGHT_GREEN
 from data.catalog import ET_EXAMPLES
 from models.water_budget import evaluate_scenario
 from reports.pdf_report import management_report
@@ -25,18 +25,20 @@ def render(demo, scenario):
 
 def test_report_inputs_outputs_references_and_footer(demo):
     pdf = render(demo, demo.active_scenario)
+    assert pdf.metadata.author == CREATOR
     text = " ".join(" ".join(page.extract_text().split()) for page in pdf.pages)
     for content in (
         demo.farm_name, "2026-11-20", "Baseline", "374.2", "23.8 AF", "ETc 27.0 in", "Expected farm delivery",
         "Efficiency 85.0% (User override)", "Target ECe", "Shoot dry weight",
-        "10.1061/JRCEA4.0001137", "fao61-balance", COPYRIGHT, LICENSE,
+        "10.1061/JRCEA4.0001137", "fao61-balance", f"Created by {CREATOR}", COPYRIGHT, LICENSE,
     ):
         assert content in text
     for index, page in enumerate(pdf.pages, 1):
         assert f"Page {index}" in page.extract_text()
         assert COPYRIGHT in page.extract_text()
     annotations = [ref.get_object() for page in pdf.pages for ref in page.get("/Annots", [])]
-    assert any(str(item.get("/A", {}).get("/URI", "")) == demo.references["fao29"].url for item in annotations)
+    urls = {item.get("/A", {}).get("/URI") for item in annotations}
+    assert {CREATOR_URL, demo.references["fao29"].url} <= urls
 
 
 def test_36_field_report_repeats_headers_and_uses_brand_palette(demo):

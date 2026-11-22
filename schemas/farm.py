@@ -173,7 +173,7 @@ class Scenario(Record):
         source_ids = {source.id for source in self.sources}
         for field in self.fields:
             if field.source_id not in source_ids:
-                raise ValueError(f"Assign {field.id} to an existing water source in Water Supply.")
+                raise ValueError(f"Assign {field.id} to an existing water source in Farm Setup.")
         return self
 
 

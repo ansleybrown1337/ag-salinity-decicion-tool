@@ -6,7 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TITLE = "Ag Salinity Manager"
-COMPANY = "AgriData Solutions, LLC"
+CREATOR = "AJ Brown, PhD"
+CREATOR_URL = "https://sites.google.com/view/ansleyjbrown"
 VERSION = "0.1.1"
 COPYRIGHT = "Copyright (C) 2026 AgriData Solutions, LLC"
 LICENSE = "GPL-2.0-or-later"

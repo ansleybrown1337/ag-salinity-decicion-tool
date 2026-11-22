@@ -75,10 +75,15 @@ DELIVERY_HELP = (
 )
 
 
-def heading(title, description=None):
+def heading(title, description=None, *, banner):
     st.title(title)
     if description:
         st.write(description)
+    st.html(
+        f'<img src="./app/static/banners/{banner}.jpg" alt="" decoding="async" '
+        'style="display:block;width:100%;height:clamp(60px, 8vw, 112px);'
+        'object-fit:cover;border-radius:8px;">'
+    )
 
 
 def errors_panel(errors):
@@ -104,7 +109,6 @@ def current_scenario():
         st.warning("Complete the field and water source entries to calculate this scenario.")
         errors_panel(errors)
         st.page_link("pages/farm_setup.py", label="Farm Setup")
-        st.page_link("pages/water_supply.py", label="Water Supply")
         return None
     return scenario
 

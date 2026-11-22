@@ -14,15 +14,17 @@ from ui.shared import (
 from ui.state import active, ui_key, workspace
 
 
-def choose_field(label, preference=None):
+def choose_field(label, preference=None, *, vertical=False):
     by_key = {row["_key"]: row for row in active()["fields"]}
     options = list(by_key)
     if not options:
         return None
     index = options.index(preference) if preference in by_key else 0
-    key = st.selectbox(
+    chooser = st.radio if vertical else st.selectbox
+    key = chooser(
         label, options, index=index, key=ui_key(f"field-{label}"),
         format_func=lambda option: by_key[option]["id"],
+        label_visibility="collapsed" if vertical else "visible",
     )
     return by_key[key]
 

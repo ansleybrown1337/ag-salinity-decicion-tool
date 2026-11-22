@@ -11,10 +11,16 @@ from ui.shared import (
     scenario_caption, selected_table_row,
 )
 from ui.state import (
-    active, demo_plan, describe_errors, field_model, install_plan, save_entry, ui_key, validated_plan, workspace,
+    active, demo_plan, describe_errors, field_model, install_plan, save_entry, ui_key,
+    validate_scenario, validated_plan, workspace,
 )
+from ui.water_sources import show_water_sources
 
-heading("Farm Setup", "Add the fields you plan to irrigate. You’ll assign their water sources in Water Supply.")
+heading(
+    "Farm Setup",
+    "Add your fields, assign their water sources, then review whether your expected water delivery covers the plan.",
+    banner="farm-setup",
+)
 state = workspace()
 scenario_caption()
 farm, year = st.columns([3, 1])
@@ -25,7 +31,13 @@ state["planning_year"] = year.number_input(
     "Planning year", min_value=1900, max_value=9999, step=1,
     value=state["planning_year"], key=ui_key("year"),
 )
-fields = active()["fields"]
+st.header("1. Add your fields")
+st.write(
+    "Enter the area, crop, soil salinity, and irrigation method for each field you plan to irrigate. "
+    "Select **Add field** after each entry."
+)
+scenario = active()
+fields = scenario["fields"]
 add_revision = ui_key("add-field-revision")
 add_key = ui_key(f"add-field/{st.session_state.get(add_revision, 0)}")
 with st.container(border=True):
@@ -88,31 +100,54 @@ if fields:
             if cancel.button("Cancel edit"):
                 close_editor()
                 reset_entry(edit_revision)
-
-    st.page_link("pages/water_supply.py", label="Continue to Water Supply", icon=":material/arrow_forward:")
 else:
     st.caption("Fields appear here after you add them.")
 
-st.divider()
-with st.expander("Farm notes (optional)"):
-    state["notes"] = st.text_area("Planning context", state["notes"], max_chars=2000, key=ui_key("farm-notes"))
+st.header("2. Add water sources and assign fields")
+st.write(
+    "For each source, enter the volume you expect to reach the farm this year and the water salinity. "
+    "Select all the fields it irrigates, then select **Add water source**. Assign each field to one source."
+)
+show_water_sources(scenario)
 
-with st.expander("Load an existing farm plan or try the demonstration (optional)"):
+st.header("3. Review your farm plan")
+st.write(
+    "When every field has a water source, calculate the plan to see how much irrigation your fields need "
+    "and where delivery may fall short."
+)
+state["notes"] = st.text_area(
+    "Add additional farm notes as needed (optional)", state["notes"], height=90, max_chars=2000,
+    key=ui_key("farm-notes"), placeholder="e.g. Planning assumptions or changes to revisit next season",
+)
+if st.button("Review and Calculate Farm Plan", type="primary"):
+    _, issues = validate_scenario(scenario)
+    if not state["farm_name"].strip():
+        issues.insert(0, "Enter a farm name at the top of Farm Setup.")
+    if issues:
+        errors_panel(issues)
+    else:
+        state["reviewed"] = True
+        st.session_state.open_dashboard = True
+        st.rerun()
+
+st.divider()
+with st.container(border=True):
+    st.subheader("Open a saved plan or try a demonstration")
     st.caption(
-        "Use a Farm Plan (.json) previously downloaded from Ag Salinity Manager, or load a sample farm "
-        "to see a completed plan. Loading either replaces the current session."
+        "Upload a .json file previously downloaded from Ag Salinity Manager to open it. "
+        "Opening a saved plan or the demonstration replaces the plan in this session."
     )
-    upload = st.file_uploader("Farm Plan (.json)", type="json", key=ui_key("upload"))
-    uploaded, demo = st.columns(2)
-    if uploaded.button("Load uploaded plan", disabled=upload is None):
+    upload = st.file_uploader("Upload a farm plan (.json)", type="json", key=ui_key("upload"))
+    if upload is not None:
         try:
             plan = load_plan(upload.getvalue())
         except ValidationError as error:
             errors_panel(describe_errors(error))
         else:
             install_plan(plan)
+            st.toast("Farm plan loaded.")
             st.rerun()
-    if demo.button("Load demonstration farm"):
+    if st.button("Load demonstration farm"):
         install_plan(demo_plan())
         st.rerun()
 

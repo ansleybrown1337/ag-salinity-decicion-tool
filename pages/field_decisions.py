@@ -9,22 +9,25 @@ from data.catalog import REFERENCES
 from models.water_budget import evaluate_field
 from schemas.scenarios import field_alternative
 from ui.comparison import water_demand_chart, yield_response_chart
-from ui.field_controls import choose_alternative_crop, choose_field
+from ui.field_controls import choose_alternative_crop
 from ui.shared import (
     CREDIT_HELP, EFF_HELP, ET_HELP, ESTIMATED_YIELD_HELP, GROSS_DEMAND_HELP, LR_HELP, TARGET_ECE_HELP, YIELD_HELP,
     errors_panel, heading, plain_text, reference_link, reset_entry, scenario_caption,
 )
 from ui.state import active, describe_errors, field_model, source_model, ui_key
 
-heading("Field Decisions", "Compare a crop or irrigation change on one field before changing your farm plan.")
+heading(
+    "Field Decisions",
+    "Choose a field in the sidebar to compare a crop or irrigation change before updating your farm plan.",
+    banner="field-decisions",
+)
 scenario_caption()
-field_selector, crop_selector = st.columns(2)
-with field_selector:
-    row = choose_field("Field to analyze", st.session_state.get("selected_field"))
-if not row:
+fields = active()["fields"]
+if not fields:
     st.page_link("pages/farm_setup.py", label="Add fields in Farm Setup")
     st.stop()
-st.session_state.selected_field = row["_key"]
+selected_key = st.session_state.get("selected_field")
+row = next((draft for draft in fields if draft["_key"] == selected_key), fields[0])
 preview_revision = ui_key(f"field-preview-revision/{row['_key']}")
 key = ui_key(f"field-preview/{row['_key']}/{st.session_state.get(preview_revision, 0)}")
 
@@ -34,7 +37,7 @@ sources = {item["id"]: item for item in active()["sources"]}
 def field_and_source(draft):
     field = field_model(draft)
     if field.source_id not in sources:
-        raise ValueError(f"Assign {field.id} to a source in Water Supply.")
+        raise ValueError(f"Assign {field.id} to a source in Farm Setup.")
     return field, source_model(sources[field.source_id])
 
 
@@ -42,16 +45,17 @@ try:
     field, source = field_and_source(row)
 except ValueError as error:
     errors_panel(describe_errors(error))
-    st.page_link("pages/water_supply.py", label="Assign water sources")
+    st.page_link("pages/farm_setup.py", label="Assign water sources in Farm Setup")
     st.stop()
 
-with crop_selector:
-    crop, et_example = choose_alternative_crop(field, "Crop to try", f"{key}/crop")
-
+st.subheader(plain_text(field.id))
 st.caption(plain_text(
-    f"{field.id} · {field.acres:g} acres · Current salinity {field.current_ece_ds_m:g} dS/m (ECe) · "
+    f"{field.acres:g} acres · Current salinity {field.current_ece_ds_m:g} dS/m (ECe) · "
     f"{source.id}, water ECw {source.ecw_ds_m:g} dS/m"
 ))
+with st.container(width=480):
+    crop, et_example = choose_alternative_crop(field, "Crop to try", f"{key}/crop")
+
 saved_label = f"Saved · {field.crop.label}"
 options = [(saved_label, field, evaluate_field(field, source))]
 chart, controls = st.columns([3, 2])

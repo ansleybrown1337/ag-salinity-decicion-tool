@@ -17,7 +17,23 @@ from ui.shared import (
 )
 from ui.state import ui_key, validated_plan, workspace
 
-heading("Farm Dashboard")
+heading("Farm Dashboard", banner="farm-dashboard")
+state = workspace()
+with st.container(border=True):
+    st.subheader("How to use this tool")
+    st.markdown(
+        "1. **Add your fields in Farm Setup.** Enter the area, crop, soil salinity, and irrigation method for each field.\n"
+        "2. **Add water sources and assign fields.** Enter each source’s expected delivery and salinity, "
+        "then select the fields it irrigates.\n"
+        "3. **Review your farm plan.** Select **Review and Calculate Farm Plan** to see where irrigation demand "
+        "may exceed delivery."
+    )
+    if st.button("Go to Farm Setup", type="secondary" if state["reviewed"] else "primary"):
+        st.switch_page("pages/farm_setup.py")
+
+if not state["reviewed"]:
+    st.stop()
+
 scenario_caption()
 scenario = current_scenario()
 if scenario is None:
@@ -29,6 +45,9 @@ if result.source_shortfall_af > 1e-8:
                f"{qualifier}{volume(result.source_shortfall_af)}.")
 else:
     st.info(result.allocation_conclusion)
+
+st.caption("Use Field Decisions to try a change on one field. Use Scenario Comparison to compare plans for the whole farm.")
+st.page_link("pages/scenarios.py", label="Compare whole-farm plans")
 
 field_count = len(result.fields)
 field_label = "field" if field_count == 1 else "fields"
@@ -82,7 +101,7 @@ st.altair_chart(source_chart, width="stretch")
 st.dataframe(sources, hide_index=True, width="stretch", column_config={
     key: st.column_config.NumberColumn(format="%.1f") for key in sources[0] if key.endswith("(AF)")
 })
-st.page_link("pages/water_supply.py", label="Edit or delete a water source")
+st.page_link("pages/farm_setup.py", label="Manage water sources in Farm Setup")
 
 st.subheader("Field results")
 rows = field_rows(result)
@@ -120,7 +139,6 @@ else:
     with cols[0].expander("Resolve entries to download JSON"):
         errors_panel(errors)
 
-state = workspace()
 if state["farm_name"].strip():
     report = management_report(state["farm_name"], state["planning_year"], state["notes"],
                                scenario, result, state["references"])

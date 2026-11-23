@@ -21,6 +21,11 @@ def farm_setup():
     return app.switch_page("pages/farm_setup.py").run()
 
 
+def load_demonstration():
+    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    return button(app, "Load demonstration farm").click().run()
+
+
 def select_table_row(app, table, index, action=None):
     # AppTest does not carry dataframe widget selections across button events.
     workspace = app.session_state.workspace
@@ -69,9 +74,11 @@ def test_first_review_reports_incomplete_setup():
 
 
 def test_demo_renders_all_pages_and_field_preview_preserves_saved_plan():
-    app = farm_setup()
-    button(app, "Load demonstration farm").click().run()
+    app = load_demonstration()
+    assert app.title[0].value == "Farm Dashboard"
     assert app.session_state.workspace["farm_name"] == "Dry Creek Demonstration Farm"
+    assert len(app.session_state.workspace["scenarios"]) == 2
+    assert any(item.value == "374.2 AF" for item in app.metric)
     app = resume_workspace(app)
     for path, title in (
         ("scenarios", "Scenario Comparison"), ("about", "About & Methods"),
@@ -94,9 +101,7 @@ def test_demo_renders_all_pages_and_field_preview_preserves_saved_plan():
 
 
 def test_scenario_page_compares_baseline_then_saves_crop_changes():
-    app = farm_setup()
-    button(app, "Load demonstration farm").click().run()
-    app = resume_workspace(app)
+    app = resume_workspace(load_demonstration())
     workspace = app.session_state.workspace
     workspace["scenarios"].pop("barley-alternative")
     app.switch_page("pages/scenarios.py").run()
@@ -160,9 +165,7 @@ def test_setup_adds_field_with_crop_estimate_then_assigns_water():
 
 
 def test_saved_field_can_be_edited_and_deleted_from_table_controls():
-    app = farm_setup()
-    button(app, "Load demonstration farm").click().run()
-    app = resume_workspace(app)
+    app = resume_workspace(load_demonstration())
     assert button(app, "Edit field").proto.disabled
     assert button(app, "Delete field").proto.disabled
 
@@ -185,9 +188,7 @@ def test_saved_field_can_be_edited_and_deleted_from_table_controls():
 
 
 def test_deleting_source_unassigns_its_fields_in_the_active_scenario():
-    app = farm_setup()
-    button(app, "Load demonstration farm").click().run()
-    app = resume_workspace(app)
+    app = resume_workspace(load_demonstration())
     assert button(app, "Delete water source").proto.disabled
     select_table_row(app, "saved-sources-table/0", 0, "Delete water source")
 
@@ -198,9 +199,7 @@ def test_deleting_source_unassigns_its_fields_in_the_active_scenario():
 
 
 def test_deleting_active_alternative_returns_to_baseline():
-    app = farm_setup()
-    button(app, "Load demonstration farm").click().run()
-    app = resume_workspace(app)
+    app = resume_workspace(load_demonstration())
     state = app.session_state.workspace
     state["active_scenario_id"] = "barley-alternative"
     app.switch_page("pages/scenarios.py").run()

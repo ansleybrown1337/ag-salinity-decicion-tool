@@ -82,7 +82,7 @@ Open [Ag Salinity Manager on localhost](http://127.0.0.1:8501). Run Streamlit fr
 
 ## Farm planning guide
 
-On **Home**, select **Get started** to open **Farm Setup**. You can upload an existing plan or load the demonstration at the top of the page. To create a new plan, follow the steps below. The home page also links to AJ Brown’s contact page and the GitHub issue tracker.
+On **Home**, select **Get started** to open **Farm Setup**. Upload an existing plan at the top of Farm Setup or follow the steps below to create one. The home page also links to AJ Brown’s contact page and the GitHub issue tracker.
 
 1. In **Farm Setup**, enter a farm name and planning year. Fill in **Field details**, then select **Add field**. To change or remove a field, select its row in **Saved fields**, then select **Edit field** or **Delete field**.
 2. Use a single field ID you recognize, such as North Pivot. Enter acreage, current soil ECe, crop, and irrigation method. Adjust the suggested seasonal crop ET for local conditions and enter effective rain if applicable.
@@ -95,7 +95,7 @@ On **Home**, select **Get started** to open **Farm Setup**. You can upload an ex
 
 ## Demonstration farm
 
-At the top of **Farm Setup**, select **Load demonstration farm** or upload [examples/example_farm.json](examples/example_farm.json). This hypothetical farm uses three fields and two independent water sources across 149 acres. Expected farm deliveries are 351 AF from Bench Canal and 70 AF from East Well.
+On **Home**, select **Load demonstration farm** to open the example results in **Farm Dashboard**. You can also upload [examples/example_farm.json](examples/example_farm.json) in **Farm Setup**. This hypothetical farm uses three fields and two independent water sources across 149 acres. Expected farm deliveries are 351 AF from Bench Canal and 70 AF from East Well.
 
 | Scenario | Field demand (AF) | Field-deliverable supply (AF) | Combined field balance (AF) | East Well balance (AF) |
 | --- | ---: | ---: | ---: | ---: |

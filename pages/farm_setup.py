@@ -11,7 +11,7 @@ from ui.shared import (
     scenario_caption, selected_table_row,
 )
 from ui.state import (
-    active, demo_plan, describe_errors, field_model, install_plan, save_entry, ui_key,
+    active, describe_errors, field_model, install_plan, save_entry, ui_key,
     validate_scenario, validated_plan, workspace,
 )
 from ui.water_sources import show_water_sources
@@ -26,10 +26,9 @@ with st.container(border=True):
     st.subheader("Upload an existing farm plan")
     st.caption(
         "Choose a .json file previously downloaded from Ag Salinity Manager. "
-        "Uploading a plan or loading the demonstration replaces the current session’s plan."
+        "Uploading a plan replaces the current session’s plan."
     )
-    saved_plan, demonstration = st.columns([3, 1])
-    upload = saved_plan.file_uploader(
+    upload = st.file_uploader(
         "Upload a farm plan (.json)", type="json", key=ui_key("upload"), label_visibility="collapsed",
     )
     if upload is not None:
@@ -41,9 +40,6 @@ with st.container(border=True):
             install_plan(plan)
             st.toast("Farm plan loaded.")
             st.rerun()
-    if demonstration.button("Load demonstration farm"):
-        install_plan(demo_plan())
-        st.rerun()
 
 state = workspace()
 st.header("Review or edit your farm plan" if state["reviewed"] else "Or create a new farm plan")

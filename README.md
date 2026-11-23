@@ -24,6 +24,40 @@ git clone <repository-clone-url>
 cd <cloned-directory>
 ```
 
+### Windows Anaconda Prompt
+
+Run these commands from the repository directory containing `app.py`.
+
+**Launch with the repository’s existing `.venv`**
+
+If `.venv\Scripts\python.exe` is already present and the app dependencies are installed, run this single line. It also works from the `(base)` prompt.
+
+```bat
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1
+```
+
+**First-time setup with Conda**
+
+If you need a new environment, run each line separately, pressing **Enter** after each one.
+
+```bat
+conda create --name saltplanner python=3.12 pip -y
+conda activate saltplanner
+python -m pip install -r requirements.txt
+python -m streamlit run app.py --server.address 127.0.0.1
+```
+
+**Launch again with Conda**
+
+Use these commands after creating the `saltplanner` environment above.
+
+```bat
+conda activate saltplanner
+python -m streamlit run app.py --server.address 127.0.0.1
+```
+
+Browse to [the local app](http://127.0.0.1:8501) and press **Ctrl+C** in Anaconda Prompt when you’re done. If `requirements.txt` or `constraints.txt` changes, rerun the install command with the Python executable for the environment you use to launch the app.
+
 **Windows PowerShell**
 
 ```powershell
@@ -48,6 +82,8 @@ Open [Ag Salinity Manager on localhost](http://127.0.0.1:8501). Run Streamlit fr
 
 ## Farm planning guide
 
+On **Home**, select **Get started** to open **Farm Setup**. You can upload an existing plan or load the demonstration at the top of the page. To create a new plan, follow the steps below. The home page also links to AJ Brown’s contact page and the GitHub issue tracker.
+
 1. In **Farm Setup**, enter a farm name and planning year. Fill in **Field details**, then select **Add field**. To change or remove a field, select its row in **Saved fields**, then select **Edit field** or **Delete field**.
 2. Use a single field ID you recognize, such as North Pivot. Enter acreage, current soil ECe, crop, and irrigation method. Adjust the suggested seasonal crop ET for local conditions and enter effective rain if applicable.
 3. Under **Add water sources and assign fields** in **Farm Setup**, enter a source ID, representative ECw, and **Expected farm delivery** in acre-feet (AF) after upstream losses. Select the fields it irrigates and choose **Add water source**. Select a saved source row to edit or delete it. Deleting a source clears its field assignments. Selecting a field already assigned elsewhere moves it to the source being saved.
@@ -59,7 +95,7 @@ Open [Ag Salinity Manager on localhost](http://127.0.0.1:8501). Run Streamlit fr
 
 ## Demonstration farm
 
-At the bottom of **Farm Setup**, select **Load demonstration farm** or upload [examples/example_farm.json](examples/example_farm.json). This hypothetical farm uses three fields and two independent water sources across 149 acres. Expected farm deliveries are 351 AF from Bench Canal and 70 AF from East Well.
+At the top of **Farm Setup**, select **Load demonstration farm** or upload [examples/example_farm.json](examples/example_farm.json). This hypothetical farm uses three fields and two independent water sources across 149 acres. Expected farm deliveries are 351 AF from Bench Canal and 70 AF from East Well.
 
 | Scenario | Field demand (AF) | Field-deliverable supply (AF) | Combined field balance (AF) | East Well balance (AF) |
 | --- | ---: | ---: | ---: | ---: |
@@ -127,7 +163,7 @@ This excerpt illustrates the structure. The linked example is a complete importa
 }
 ```
 
-Use **Upload a farm plan (.json)** at the bottom of **Farm Setup** to open a saved plan. Invalid files retain the current session and display validation messages. Download the JSON before closing the session. Keep files containing actual farm data out of version control.
+Under **Upload an existing farm plan** at the top of **Farm Setup**, select **Upload** to open a saved JSON file. Invalid files retain the current session and display validation messages. Download the JSON before closing the session. Keep files containing actual farm data out of version control.
 
 ## Repository structure
 
@@ -157,7 +193,7 @@ python -m pytest
 
 ### Optional branding
 
-Place an authorized PNG or JPEG at `assets/logo.png` or set `AG_SALINITY_LOGO` to a local absolute or repository-relative path. The app and PDF use the configured image when present. Set `AG_SALINITY_REPOSITORY_URL` to show a repository link in the application.
+Place an authorized PNG or JPEG at `assets/logo.png` or set `AG_SALINITY_LOGO` to a local absolute or repository-relative path. The app and PDF use the configured image when present. Set `AG_SALINITY_REPOSITORY_URL` to override the default GitHub repository for the app’s repository and issue links.
 
 ## Known limitations
 

@@ -18,10 +18,35 @@ from ui.water_sources import show_water_sources
 
 heading(
     "Farm Setup",
-    "Add your fields, assign their water sources, then review whether your expected water delivery covers the plan.",
+    "Upload a saved farm plan or create one using the steps below.",
     banner="farm-setup",
 )
+
+with st.container(border=True):
+    st.subheader("Upload an existing farm plan")
+    st.caption(
+        "Choose a .json file previously downloaded from Ag Salinity Manager. "
+        "Uploading a plan or loading the demonstration replaces the current session’s plan."
+    )
+    saved_plan, demonstration = st.columns([3, 1])
+    upload = saved_plan.file_uploader(
+        "Upload a farm plan (.json)", type="json", key=ui_key("upload"), label_visibility="collapsed",
+    )
+    if upload is not None:
+        try:
+            plan = load_plan(upload.getvalue())
+        except ValidationError as error:
+            errors_panel(describe_errors(error))
+        else:
+            install_plan(plan)
+            st.toast("Farm plan loaded.")
+            st.rerun()
+    if demonstration.button("Load demonstration farm"):
+        install_plan(demo_plan())
+        st.rerun()
+
 state = workspace()
+st.header("Review or edit your farm plan" if state["reviewed"] else "Or create a new farm plan")
 scenario_caption()
 farm, year = st.columns([3, 1])
 state["farm_name"] = farm.text_input(
@@ -127,29 +152,7 @@ if st.button("Review and Calculate Farm Plan", type="primary"):
         errors_panel(issues)
     else:
         state["reviewed"] = True
-        st.session_state.open_dashboard = True
-        st.rerun()
-
-st.divider()
-with st.container(border=True):
-    st.subheader("Open a saved plan or try a demonstration")
-    st.caption(
-        "Upload a .json file previously downloaded from Ag Salinity Manager to open it. "
-        "Opening a saved plan or the demonstration replaces the plan in this session."
-    )
-    upload = st.file_uploader("Upload a farm plan (.json)", type="json", key=ui_key("upload"))
-    if upload is not None:
-        try:
-            plan = load_plan(upload.getvalue())
-        except ValidationError as error:
-            errors_panel(describe_errors(error))
-        else:
-            install_plan(plan)
-            st.toast("Farm plan loaded.")
-            st.rerun()
-    if st.button("Load demonstration farm"):
-        install_plan(demo_plan())
-        st.rerun()
+        st.switch_page("pages/farm_dashboard.py")
 
 plan, errors = validated_plan()
 if plan:

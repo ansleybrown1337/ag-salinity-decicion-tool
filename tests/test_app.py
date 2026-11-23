@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from streamlit.testing.v1 import AppTest
 
-from config.branding import ROOT
+from config.branding import CONTACT_URL, COPYRIGHT_YEAR, LICENSE, REPOSITORY_URL, ROOT, TITLE
 
 
 def button(app, label):
@@ -14,6 +14,11 @@ def button(app, label):
 
 def widget(elements, label):
     return next(item for item in elements if item.label == label)
+
+
+def farm_setup():
+    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    return app.switch_page("pages/farm_setup.py").run()
 
 
 def select_table_row(app, table, index, action=None):
@@ -31,17 +36,29 @@ def resume_workspace(app):
     # Start a fresh widget tree with the workspace saved by the action.
     resumed = AppTest.from_file(str(ROOT / "app.py"))
     resumed.session_state.workspace = deepcopy(app.session_state.workspace)
-    return resumed.run()
+    return resumed.switch_page("pages/farm_setup.py").run()
+
+
+def test_home_guides_new_users_to_farm_setup():
+    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    assert app.title[0].value == TITLE
+    assert any(item.value == f"Copyright © {COPYRIGHT_YEAR} · {LICENSE}" for item in app.sidebar.caption)
+    guide = next(item.value for item in app.markdown if "**Add your fields.**" in item.value)
+    assert "**Add water sources and assign fields.**" in guide
+    assert "**Review your farm plan.**" in guide
+    assert any(CONTACT_URL in item.value for item in app.markdown)
+    assert any(f"{REPOSITORY_URL.rstrip('/')}/issues" in item.value for item in app.markdown)
+    button(app, "Get started").click().run()
+    assert app.title[0].value == "Farm Setup"
+    assert not app.exception
 
 
 def test_first_review_reports_incomplete_setup():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     assert app.title[0].value == "Farm Setup"
     app.switch_page("pages/farm_dashboard.py").run()
     assert app.title[0].value == "Farm Dashboard"
-    guide = next(item.value for item in app.markdown if "**Add your fields in Farm Setup.**" in item.value)
-    assert "**Add water sources and assign fields.**" in guide
-    assert "**Review your farm plan.**" in guide
+    assert "Complete Farm Setup" in app.info[0].value
     assert not app.warning
     assert not app.metric
     app.switch_page("pages/farm_setup.py").run()
@@ -52,7 +69,7 @@ def test_first_review_reports_incomplete_setup():
 
 
 def test_demo_renders_all_pages_and_field_preview_preserves_saved_plan():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     button(app, "Load demonstration farm").click().run()
     assert app.session_state.workspace["farm_name"] == "Dry Creek Demonstration Farm"
     app = resume_workspace(app)
@@ -77,7 +94,7 @@ def test_demo_renders_all_pages_and_field_preview_preserves_saved_plan():
 
 
 def test_scenario_page_compares_baseline_then_saves_crop_changes():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     button(app, "Load demonstration farm").click().run()
     app = resume_workspace(app)
     workspace = app.session_state.workspace
@@ -102,7 +119,7 @@ def test_scenario_page_compares_baseline_then_saves_crop_changes():
 
 
 def test_setup_adds_field_with_crop_estimate_then_assigns_water():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     assert not app.get("dataframe")
     assert widget(app.number_input, "Desired relative yield (%)").value == 100.0
     widget(app.text_input, "Farm name").set_value("Test Farm")
@@ -143,7 +160,7 @@ def test_setup_adds_field_with_crop_estimate_then_assigns_water():
 
 
 def test_saved_field_can_be_edited_and_deleted_from_table_controls():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     button(app, "Load demonstration farm").click().run()
     app = resume_workspace(app)
     assert button(app, "Edit field").proto.disabled
@@ -168,7 +185,7 @@ def test_saved_field_can_be_edited_and_deleted_from_table_controls():
 
 
 def test_deleting_source_unassigns_its_fields_in_the_active_scenario():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     button(app, "Load demonstration farm").click().run()
     app = resume_workspace(app)
     assert button(app, "Delete water source").proto.disabled
@@ -181,7 +198,7 @@ def test_deleting_source_unassigns_its_fields_in_the_active_scenario():
 
 
 def test_deleting_active_alternative_returns_to_baseline():
-    app = AppTest.from_file(str(ROOT / "app.py")).run()
+    app = farm_setup()
     button(app, "Load demonstration farm").click().run()
     app = resume_workspace(app)
     state = app.session_state.workspace

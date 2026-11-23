@@ -3,26 +3,25 @@
 
 import streamlit as st
 
-from config.branding import CREATOR, CREATOR_URL, TITLE, logo_path
+from config.branding import COPYRIGHT_YEAR, CREATOR, CREATOR_URL, LICENSE, TITLE, logo_path
 from ui.field_controls import choose_field
 from ui.state import initialize, workspace
 
 st.set_page_config(page_title=TITLE, layout="wide")
 initialize()
 
-setup = st.Page("pages/farm_setup.py", title="Farm Setup", default=True)
+home = st.Page("pages/home.py", title="Home", default=True)
+setup = st.Page("pages/farm_setup.py", title="Farm Setup")
 dashboard = st.Page("pages/farm_dashboard.py", title="Farm Dashboard")
 fields = st.Page("pages/field_decisions.py", title="Field Decisions")
 scenarios = st.Page("pages/scenarios.py", title="Scenario Comparison")
 about = st.Page("pages/about.py", title="About & Methods")
 
-pages = [setup, dashboard]
+pages = [home, setup, dashboard]
 if workspace()["reviewed"]:
     pages += [fields, scenarios]
 pages.append(about)
 page = st.navigation(pages, position="hidden")
-if st.session_state.pop("open_dashboard", False):
-    st.switch_page(dashboard)
 
 with st.sidebar:
     for item in pages:
@@ -37,5 +36,6 @@ with st.sidebar:
         st.image(str(logo), width=170)
     st.header(TITLE)
     st.caption(f"Created by [{CREATOR}]({CREATOR_URL})")
+    st.caption(f"Copyright © {COPYRIGHT_YEAR} · {LICENSE}")
 
 page.run()

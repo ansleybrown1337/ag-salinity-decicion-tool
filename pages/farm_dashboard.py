@@ -19,19 +19,10 @@ from ui.state import ui_key, validated_plan, workspace
 
 heading("Farm Dashboard", banner="farm-dashboard")
 state = workspace()
-with st.container(border=True):
-    st.subheader("How to use this tool")
-    st.markdown(
-        "1. **Add your fields in Farm Setup.** Enter the area, crop, soil salinity, and irrigation method for each field.\n"
-        "2. **Add water sources and assign fields.** Enter each source’s expected delivery and salinity, "
-        "then select the fields it irrigates.\n"
-        "3. **Review your farm plan.** Select **Review and Calculate Farm Plan** to see where irrigation demand "
-        "may exceed delivery."
-    )
-    if st.button("Go to Farm Setup", type="secondary" if state["reviewed"] else "primary"):
-        st.switch_page("pages/farm_setup.py")
-
 if not state["reviewed"]:
+    st.info("Complete Farm Setup and select **Review and Calculate Farm Plan** to see your results here.")
+    if st.button("Go to Farm Setup", type="primary"):
+        st.switch_page("pages/farm_setup.py")
     st.stop()
 
 scenario_caption()

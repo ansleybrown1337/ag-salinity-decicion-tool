@@ -50,5 +50,4 @@ st.subheader("Software and license")
 st.markdown(f"Created by [{CREATOR}]({CREATOR_URL})")
 st.write(f"Version {VERSION} · {LICENSE}")
 st.caption("OpenAI generated the banner images for Ag Salinity Manager. They illustrate agricultural settings.")
-if REPOSITORY_URL:
-    st.link_button("Project repository", REPOSITORY_URL)
+st.link_button("Project repository", REPOSITORY_URL)

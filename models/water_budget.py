@@ -9,6 +9,8 @@ from models.irrigation import IrrigationDepths, acre_feet, irrigation_depths, ne
 from models.leaching import leaching_requirement
 from schemas.farm import FieldPlan, Scenario, WaterSource
 
+WATER_TOLERANCE_AF = 1e-8
+
 
 @dataclass(frozen=True)
 class FieldResult:
@@ -26,18 +28,73 @@ class FieldResult:
 
     @property
     def crop_only_af(self):
-        return acre_feet(self.depths.crop_only_gross_in, self.field.acres) if self.depths else None
+        return self.net_crop_af / (self.field.irrigation.efficiency_pct / 100)
 
     @property
     def added_leach_field_af(self):
         return acre_feet(self.depths.additional_gross_in, self.field.acres) if self.depths else None
 
+    @property
+    def maintenance_assessable(self):
+        return self.depths is not None and (self.lr == 0 or self.net_crop_af > 0)
+
 
 @dataclass(frozen=True)
 class SourceResult:
     source: WaterSource
-    demand_af: float | None
-    known_demand_af: float
+    fields: tuple[FieldResult, ...]
+
+    @property
+    def demand_af(self):
+        volumes = [field.field_af for field in self.fields]
+        return fsum(volumes) if None not in volumes else None
+
+    @property
+    def known_demand_af(self):
+        return fsum(field.field_af if field.field_af is not None else field.crop_only_af for field in self.fields)
+
+    @property
+    def crop_only_af(self):
+        return fsum(field.crop_only_af for field in self.fields)
+
+    @property
+    def extra_leaching_af(self):
+        if any(not field.maintenance_assessable for field in self.fields):
+            return None
+        return fsum(field.added_leach_field_af for field in self.fields)
+
+    @property
+    def leaching_gap_af(self):
+        extra = self.extra_leaching_af
+        if extra is None:
+            return None
+        after_crops = max(0.0, self.source.delivery_af - self.crop_only_af)
+        return max(0.0, extra - after_crops)
+
+    @property
+    def leaching_status(self):
+        if not self.fields:
+            return "No fields assigned"
+        if self.crop_only_af - self.source.delivery_af > WATER_TOLERANCE_AF:
+            return "Short before leaching"
+        gap = self.leaching_gap_af
+        if gap is None:
+            return "Maintenance coverage undetermined"
+        if gap > WATER_TOLERANCE_AF:
+            return "Covers crops with a leaching gap"
+        return "Covers crops and leaching"
+
+    def field_leaching_status(self, field: FieldResult) -> str:
+        if not field.maintenance_assessable:
+            return "Maintenance coverage undetermined"
+        if field.lr == 0:
+            return "No maintenance leaching required"
+        balance = self.balance_af
+        if balance is not None and balance >= -WATER_TOLERANCE_AF:
+            return "Maintenance leaching covered"
+        if len(self.fields) > 1:
+            return "Field allocation needed"
+        return "Leaching gap"
 
     @property
     def balance_af(self):
@@ -49,7 +106,7 @@ class SourceResult:
 
     @property
     def assessment(self):
-        if self.shortfall_af > 1e-8:
+        if self.shortfall_af > WATER_TOLERANCE_AF:
             return "Shortfall" if self.demand_af is not None else "Known demand exceeds delivery"
         return "Within delivery" if self.demand_af is not None else "Undetermined"
 
@@ -91,7 +148,7 @@ class FarmResult:
 
     @property
     def allocation_conclusion(self):
-        if self.source_shortfall_af > 1e-8:
+        if self.source_shortfall_af > WATER_TOLERANCE_AF:
             return "At least one water source falls short of assigned demand."
         if self.field_demand_af is None:
             return "Water sufficiency is undetermined because at least one field has no feasible estimate."
@@ -163,9 +220,5 @@ def evaluate_scenario(scenario: Scenario) -> FarmResult:
     fields = tuple(evaluate_field(field, sources[field.source_id]) for field in scenario.fields)
     assigned = {source_id: [] for source_id in sources}
     for result in fields:
-        assigned[result.source.id].append(result.field_af)
-    source_results = []
-    for source_id, volumes in assigned.items():
-        subtotal = fsum(volume for volume in volumes if volume is not None)
-        source_results.append(SourceResult(sources[source_id], None if None in volumes else subtotal, subtotal))
-    return FarmResult(fields, tuple(source_results))
+        assigned[result.source.id].append(result)
+    return FarmResult(fields, tuple(SourceResult(sources[key], tuple(rows)) for key, rows in assigned.items()))

@@ -41,10 +41,17 @@ with st.expander("Seasonal crop ET starting estimates"):
     st.markdown(citation(REFERENCES["csu-seasonal-et"]))
 st.subheader("Scientific references")
 st.markdown("\n".join(f"- {citation(reference)}" for reference in REFERENCES.values()))
+st.subheader("Experimental optimization")
+st.write(
+    "Optimization tests eligible crops against source-specific water budgets and compares estimated gross revenue "
+    "with and without the maintenance leaching constraint. Soil salinity targets are held fixed across candidates. "
+    "Revenue uses the entered price, expected yield without salinity stress and modeled yield at current soil salinity."
+)
+st.markdown("[SciPy mixed-integer linear programming](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html)")
 st.subheader("Future development")
 st.write(
     "Soil reclamation planning, weather-based ET estimates, spatial salinity analysis, dynamic water and salt "
-    "balances, water blending, economics, optimization, and uncertainty analysis are future work."
+    "balances, water blending, production costs, and uncertainty analysis are future work."
 )
 st.subheader("Software and license")
 st.markdown(f"Created by [{CREATOR}]({CREATOR_URL})")

@@ -161,6 +161,7 @@ class _LegacyFieldPlan(FieldPlan):
 class Scenario(Record):
     id: ShortText
     name: ShortText
+    number: Annotated[int, Field(ge=1, strict=True)] | None = Field(default=None, exclude_if=lambda value: value is None)
     fields: Annotated[tuple[FieldPlan, ...], Field(min_length=1)]
     sources: Annotated[tuple[WaterSource, ...], Field(min_length=1)]
 
@@ -204,6 +205,9 @@ class FarmPlan(Record):
         names = {scenario.name.casefold() for scenario in self.scenarios}
         if len(ids) != len(self.scenarios) or len(names) != len(self.scenarios):
             raise ValueError("Scenario IDs and names must be unique.")
+        numbers = [scenario.number for scenario in self.scenarios if scenario.number is not None]
+        if len(numbers) != len(set(numbers)):
+            raise ValueError("Scenario numbers must be unique.")
         if self.active_scenario_id not in ids:
             raise ValueError("The active scenario ID must identify a saved scenario.")
         for scenario in self.scenarios:

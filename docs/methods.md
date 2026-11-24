@@ -28,6 +28,8 @@ Field demand in acre-feet (AF) equals G (in) × area (ac) / 12. Each field is as
 
 Compare the summed gross field demand assigned to each source with its expected farm delivery. The combined farm balance is total expected delivery minus total gross field demand. A positive combined balance may coexist with an individual source shortfall. Surplus at one source cannot offset another under fixed assignments. A source with an infeasible field shows known demand and an undetermined total.
 
+The source leaching gap is the additional gross maintenance demand minus delivery remaining after crop-only demand, bounded below by zero. A crop-only deficit is reported separately. When combined demand exceeds a shared source’s delivery, coverage for individual fields depends on the irrigator’s allocation. The model leaves coverage undetermined for saline irrigation sources when crop deficit is zero because rainfall-driven drainage is outside the budget.
+
 ## Interpretation and limitations
 
 Use the estimates to compare plans with site-specific field and water information. Drainage capacity, water table, hydraulic conductivity, soil heterogeneity, water delivery timing, and irrigation uniformity require separate evaluation. Salinity measures dissolved salts, while sodicity and associated infiltration risks require additional sodium and soil information. Seasonal volume sufficiency does not establish delivery capacity or agronomic performance.

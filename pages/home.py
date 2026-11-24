@@ -18,11 +18,11 @@ heading(
 with st.container(border=True):
     st.subheader("How to use this tool")
     st.markdown(
-        "1. **Add your fields.** Enter the area, crop, soil salinity, and irrigation method for each field.\n"
-        "2. **Add water sources and assign fields.** Enter each source’s expected delivery and salinity, "
-        "then select the fields it irrigates.\n"
-        "3. **Review your farm plan.** Select **Review and Calculate Farm Plan** to check for water shortfalls. "
-        "Then explore crop or irrigation changes for one field or compare plans for the whole farm."
+        "1. **Farm Setup.** Add your fields, enter water sources, and assign a source to each field.\n"
+        "2. **Farm Dashboard.** Review water supply and estimated yield loss for your baseline plan.\n"
+        "3. **What-If Scenarios.** Save and compare alternate crop or rainfall plans.\n"
+        "4. **Field Details.** Select a field in the sidebar to see what drives its results across plans.\n"
+        "5. **Optimization (experimental).** Compare crop plans for gross revenue with and without a maintenance leaching requirement."
     )
     with st.container(horizontal=True):
         if st.button("Get started", type="primary"):

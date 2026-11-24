@@ -4,8 +4,8 @@
 import streamlit as st
 
 from config.branding import COPYRIGHT_YEAR, CREATOR, CREATOR_URL, LICENSE, TITLE, logo_path
-from ui.field_controls import choose_field
-from ui.state import initialize, workspace
+from ui.shared import plain_text
+from ui.state import field_names, initialize
 
 st.set_page_config(page_title=TITLE, layout="wide")
 initialize()
@@ -13,22 +13,41 @@ initialize()
 home = st.Page("pages/home.py", title="Home", default=True)
 setup = st.Page("pages/farm_setup.py", title="Farm Setup")
 dashboard = st.Page("pages/farm_dashboard.py", title="Farm Dashboard")
-fields = st.Page("pages/field_decisions.py", title="Field Decisions")
-scenarios = st.Page("pages/scenarios.py", title="Scenario Comparison")
+scenarios = st.Page("pages/scenarios.py", title="What-If Scenarios")
+fields = st.Page("pages/field_decisions.py", title="Field Details")
+optimization = st.Page("pages/optimization.py", title="Optimization")
 about = st.Page("pages/about.py", title="About & Methods")
 
-pages = [home, setup, dashboard]
-if workspace()["reviewed"]:
-    pages += [fields, scenarios]
-pages.append(about)
-page = st.navigation(pages, position="hidden")
+navigation = [
+    (home, "Home"),
+    (setup, "1. Farm Setup"),
+    (dashboard, "2. Farm Dashboard"),
+    (scenarios, "3. What-If Scenarios"),
+    (fields, "4. Field Details"),
+    (optimization, "5. Optimization"),
+    (about, "About & Methods"),
+]
+page = st.navigation([item for item, _ in navigation], position="hidden")
 
 with st.sidebar:
-    for item in pages:
-        st.page_link(item, width="stretch")
-        if item is fields and page is fields:
-            row = choose_field("Field to analyze", st.session_state.get("selected_field"), vertical=True)
-            st.session_state.selected_field = row["_key"] if row else None
+    for item, label in navigation:
+        st.page_link(item, label=label, width="stretch")
+        if item is fields and (names := field_names()):
+            selected = st.session_state.get("selected_field")
+            if selected not in names:
+                selected = next(iter(names), None)
+            st.html(
+                "<style>.st-key-field-navigation { padding-left: 1.25rem; }"
+                ".st-key-field-navigation button { min-height: 1.8rem; padding: .15rem .55rem; }</style>"
+            )
+            with st.container(key="field-navigation", gap=None):
+                for field_key, field_name in names.items():
+                    if st.button(
+                        plain_text(field_name), key=f"sidebar-field/{field_key}",
+                        type="secondary" if page is fields and selected == field_key else "tertiary",
+                    ):
+                        st.session_state.selected_field = field_key
+                        st.switch_page(fields)
 
     st.divider()
     logo = logo_path()

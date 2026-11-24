@@ -9,6 +9,7 @@ This preliminary review describes the pinned direct requirements and the depende
 | pandas 2.3.3 | Interactive tables and chart data | [BSD-3-Clause](https://github.com/pandas-dev/pandas/blob/v2.3.3/LICENSE) |
 | Pydantic 2.12.5 | Input validation and configuration | [MIT](https://github.com/pydantic/pydantic/blob/v2.12.5/LICENSE) |
 | ReportLab 4.4.10 | PDF generation | [BSD-3-Clause](https://pypi.org/project/reportlab/4.4.10/) |
+| SciPy 1.18.1 | Mixed-integer crop optimization | [BSD-3-Clause and bundled component notices](https://pypi.org/project/scipy/1.18.1/) |
 | pytest 9.0.2 | Test runner | [MIT](https://github.com/pytest-dev/pytest/blob/9.0.2/LICENSE) |
 | pypdf 6.8.0 | PDF validation in tests | [BSD-3-Clause](https://github.com/py-pdf/pypdf/blob/6.8.0/LICENSE) |
 

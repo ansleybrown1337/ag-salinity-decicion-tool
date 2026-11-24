@@ -11,7 +11,7 @@ from ui.shared import (
     scenario_caption, selected_table_row,
 )
 from ui.state import (
-    active, describe_errors, field_model, install_plan, save_entry, ui_key,
+    active, baseline_id, describe_errors, field_model, install_plan, save_entry, ui_key,
     validate_scenario, validated_plan, workspace,
 )
 from ui.water_sources import show_water_sources
@@ -148,7 +148,9 @@ if st.button("Review and Calculate Farm Plan", type="primary"):
         errors_panel(issues)
     else:
         state["reviewed"] = True
-        st.switch_page("pages/farm_dashboard.py")
+        if scenario["id"] == baseline_id():
+            st.switch_page("pages/farm_dashboard.py")
+        st.switch_page("pages/scenarios.py")
 
 plan, errors = validated_plan()
 if plan:

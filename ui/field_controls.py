@@ -11,22 +11,7 @@ from ui.shared import (
     CREDIT_HELP, ECE_HELP, EFF_HELP, ET_HELP, RAIN_HELP, TARGET_ECE_HELP, YIELD_HELP,
     plain_text, ref_help, reference_link,
 )
-from ui.state import active, ui_key, workspace
-
-
-def choose_field(label, preference=None, *, vertical=False):
-    by_key = {row["_key"]: row for row in active()["fields"]}
-    options = list(by_key)
-    if not options:
-        return None
-    index = options.index(preference) if preference in by_key else 0
-    chooser = st.radio if vertical else st.selectbox
-    key = chooser(
-        label, options, index=index, key=ui_key(f"field-{label}"),
-        format_func=lambda option: by_key[option]["id"],
-        label_visibility="collapsed" if vertical else "visible",
-    )
-    return by_key[key]
+from ui.state import ui_key, workspace
 
 
 def choose_alternative_crop(field, label, key):
@@ -110,6 +95,7 @@ def edit_parameters(row, *, include_et=False, key=None):
         )
     else:
         row["target_ece_ds_m"] = None
+        cols[1].caption("The automatic leaching target uses the desired relative yield. At 100%, it equals the crop threshold.")
     row["target_ece_override"] = manual
     if include_et:
         row["etc_in"] = st.number_input(

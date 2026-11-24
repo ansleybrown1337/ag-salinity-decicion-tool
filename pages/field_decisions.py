@@ -1,144 +1,141 @@
 # Copyright (C) 2026 AgriData Solutions, LLC
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from math import ceil
-
 import streamlit as st
 
-from data.catalog import REFERENCES
-from models.water_budget import evaluate_field
-from schemas.scenarios import field_alternative
+from models.water_budget import evaluate_field, evaluate_scenario
 from ui.comparison import water_demand_chart, yield_response_chart
-from ui.field_controls import choose_alternative_crop
-from ui.shared import (
-    CREDIT_HELP, EFF_HELP, ET_HELP, ESTIMATED_YIELD_HELP, GROSS_DEMAND_HELP, LR_HELP, TARGET_ECE_HELP, YIELD_HELP,
-    errors_panel, heading, plain_text, reference_link, reset_entry, scenario_caption,
+from ui.shared import TARGET_ECE_HELP, errors_panel, heading, plain_text, target_basis
+from ui.state import (
+    baseline_id, describe_errors, field_model, field_names, identifier, scenario_ids, scenario_label, source_model,
+    start_scenario_editor, ui_key, validate_scenario, workspace,
 )
-from ui.state import active, describe_errors, field_model, source_model, ui_key
-
-heading(
-    "Field Decisions",
-    "Choose a field in the sidebar to compare a crop or irrigation change before updating your farm plan.",
-    banner="field-decisions",
-)
-scenario_caption()
-fields = active()["fields"]
-if not fields:
-    st.page_link("pages/farm_setup.py", label="Add fields in Farm Setup")
-    st.stop()
-selected_key = st.session_state.get("selected_field")
-row = next((draft for draft in fields if draft["_key"] == selected_key), fields[0])
-preview_revision = ui_key(f"field-preview-revision/{row['_key']}")
-key = ui_key(f"field-preview/{row['_key']}/{st.session_state.get(preview_revision, 0)}")
-
-sources = {item["id"]: item for item in active()["sources"]}
 
 
-def field_and_source(draft):
-    field = field_model(draft)
-    if field.source_id not in sources:
-        raise ValueError(f"Assign {field.id} to a source in Farm Setup.")
-    return field, source_model(sources[field.source_id])
+heading("Field Details", "Choose a field in the sidebar to see how it compares across saved plans.", banner="field-decisions")
+with st.container(horizontal=True):
+    if st.button("Back to What-If Scenarios", icon=":material/arrow_back:"):
+        st.switch_page("pages/scenarios.py")
+    if st.button("Back to Farm Dashboard", icon=":material/arrow_back:"):
+        st.switch_page("pages/farm_dashboard.py")
 
-
-try:
-    field, source = field_and_source(row)
-except ValueError as error:
-    errors_panel(describe_errors(error))
-    st.page_link("pages/farm_setup.py", label="Assign water sources in Farm Setup")
+names = field_names()
+if not names:
+    st.info("Add a field in Farm Setup to see its details.")
+    if st.button("Go to Farm Setup", type="primary"):
+        st.switch_page("pages/farm_setup.py")
     st.stop()
 
-st.subheader(plain_text(field.id))
-st.caption(plain_text(
-    f"{field.acres:g} acres · Current salinity {field.current_ece_ds_m:g} dS/m (ECe) · "
-    f"{source.id}, water ECw {source.ecw_ds_m:g} dS/m"
-))
-with st.container(width=480):
-    crop, et_example = choose_alternative_crop(field, "Crop to try", f"{key}/crop")
+selected = st.session_state.get("selected_field")
+if selected not in names:
+    selected = next(iter(names))
+field_name = plain_text(names[selected])
+st.subheader(field_name)
 
-saved_label = f"Saved · {field.crop.label}"
-options = [(saved_label, field, evaluate_field(field, source))]
-chart, controls = st.columns([3, 2])
-with controls.container(border=True):
-    st.subheader("Try a change")
-    st.caption("The preview uses this field’s acreage, soil salinity, effective rain and water source. "
-               "Changing the crop or yield goal recalculates the salinity target.")
-    start_et = et_example.etc_in if et_example else field.etc_in
-    etc = st.slider(
-        "Seasonal crop ET (in)", 0.0, max(60.0, float(ceil(start_et))), start_et, step=0.1,
-        key=f"{key}/et/{crop.id if crop else 'saved'}", help=ET_HELP,
-    )
-    if et_example:
-        reference = reference_link(REFERENCES[et_example.reference_id], "CSU Extension Table 1")
-        st.caption(f"{plain_text(et_example.location)} starting estimate · {start_et:g} in. {reference}")
-    goal = st.slider(
-        "Desired relative yield (%)", min(1.0, field.desired_yield_pct), 100.0,
-        float(field.desired_yield_pct), step=1.0, key=f"{key}/goal", help=YIELD_HELP,
-    )
-    efficiency = st.slider(
-        "Field application efficiency (%)", min(1.0, field.irrigation.efficiency_pct), 100.0,
-        float(field.irrigation.efficiency_pct), step=0.5, key=f"{key}/efficiency", help=EFF_HELP,
-    )
-    credit = st.slider(
-        "Effective leaching credit (%)", 0.0, 100.0, float(field.leaching_credit_pct), step=1.0,
-        key=f"{key}/credit", help=CREDIT_HELP,
-    )
+state = workspace()
+first = baseline_id()
+ordered_ids = scenario_ids()
+matches = {}
+missing = []
+for scenario_id in ordered_ids:
+    draft = state["scenarios"][scenario_id]
+    row = next((field for field in draft["fields"] if field["id"].casefold() == selected), None)
+    if row is None:
+        missing.append(scenario_label(scenario_id))
+    else:
+        matches[scenario_id] = (draft, row)
 
-trial = field_alternative(field, crop=crop, etc_in=etc, et_estimate=et_example, desired_yield_pct=goal,
-                          efficiency_pct=efficiency, leaching_credit_pct=credit)
-if trial != field:
-    options.append((f"What-if · {trial.crop.label}", trial, evaluate_field(trial, source)))
-
-with chart:
-    st.subheader("Yield response to salinity")
-    st.altair_chart(yield_response_chart(options), width="stretch")
-    st.caption("Each curve shows yield relative to that crop’s potential. The circle marks current salinity "
-               "and the diamond marks target salinity.")
-    if len(options) == 2 and options[0][1].crop == trial.crop:
-        st.caption("The curves overlap when the crop stays the same. Irrigation changes appear in the water budget.")
-
-st.subheader("Seasonal irrigation by field")
-other_fields = {draft["_key"]: draft for draft in active()["fields"] if draft["_key"] != row["_key"]}
+labels = {key: scenario_label(key) for key in matches}
 shown = st.multiselect(
-    "Additional fields to plot (optional)", list(other_fields), format_func=lambda option: other_fields[option]["id"],
-    key=ui_key(f"field-chart-selection/{row['_key']}"),
-    help="Add other saved fields to the chart. Use the × next to a field to remove it from the chart.",
+    "Plans to compare", list(matches), default=list(matches)[:3],
+    format_func=labels.__getitem__,
+    key=ui_key(f"field-plans/{selected}/{tuple(matches)}"),
 )
-bars = [(f"{field.id} · {plan}", result) for plan, _, result in options]
-for selected in shown:
-    try:
-        extra_field, extra_source = field_and_source(other_fields[selected])
-        bars.append((f"{extra_field.id} · Saved", evaluate_field(extra_field, extra_source)))
-    except ValueError as error:
-        errors_panel(describe_errors(error))
-
-budgets = [
-    {"Plan": label, "Crop-only (AF)": result.crop_only_af, "Extra leaching (AF)": result.added_leach_field_af}
-    for label, result in bars
-]
-st.altair_chart(water_demand_chart(budgets, row_label="Field and option"), width="stretch")
-st.caption("Crop-only irrigation includes application losses. The leaching segment shows the additional water "
-           "needed beyond that budget.")
-missing = [label for label, result in bars if result.field_af is None]
 if missing:
-    st.warning(plain_text(f"No feasible irrigation estimate for {', '.join(missing)}."))
+    st.caption(plain_text(f"Field ID not found in: {', '.join(missing)}."))
 
-st.dataframe([
-    {
-        "Plan": label, "Yield at current salinity (%)": result.current_yield_pct,
-        "Target salinity (dS/m)": selected.target_ece_ds_m,
-        "Leaching requirement (%)": result.lr * 100 if result.lr is not None else None,
-        "Crop-only (AF)": result.crop_only_af, "Extra leaching (AF)": result.added_leach_field_af,
-        "Total irrigation (AF)": result.field_af, "Notes": " ".join(result.warnings),
-    }
-    for label, selected, result in options
-], hide_index=True, column_config={
-    "Yield at current salinity (%)": st.column_config.NumberColumn(format="%.1f", help=ESTIMATED_YIELD_HELP),
-    "Target salinity (dS/m)": st.column_config.NumberColumn(format="%.2f", help=TARGET_ECE_HELP),
-    "Leaching requirement (%)": st.column_config.NumberColumn(format="%.1f", help=LR_HELP),
-    "Total irrigation (AF)": st.column_config.NumberColumn(format="%.1f", help=GROSS_DEMAND_HELP),
-})
-if len(options) > 1 and st.button("Remove what-if row", help="Reset the crop and sliders to the saved field."):
-    reset_entry(preview_revision)
-st.page_link("pages/farm_setup.py", label="Edit or delete a saved field in Farm Setup")
-st.page_link("pages/scenarios.py", label="Compare whole-farm scenarios")
+options = []
+positions = []
+coverage = {}
+for scenario_id in shown:
+    draft, row = matches[scenario_id]
+    try:
+        field = field_model(row)
+        source = next((item for item in draft["sources"] if item["id"] == field.source_id), None)
+        if source is None:
+            raise ValueError(f"Assign {field.id} to a water source in Farm Setup.")
+        result = evaluate_field(field, source_model(source))
+    except ValueError as error:
+        errors_panel([f"{scenario_label(scenario_id)}. {message}" for message in describe_errors(error)])
+    else:
+        label = labels[scenario_id]
+        options.append((label, draft["name"], result))
+        positions.append(0 if scenario_id == first else draft["number"])
+        plan, _ = validate_scenario(draft)
+        if plan is None:
+            coverage[label] = "Maintenance coverage undetermined"
+        else:
+            farm_sources = evaluate_scenario(plan).sources
+            source_result = next(item for item in farm_sources if item.source.id == result.source.id)
+            coverage[label] = source_result.field_leaching_status(result)
+
+if options:
+    st.header("Yield response to salinity")
+    st.altair_chart(yield_response_chart(options, scenario_positions=positions), width="stretch")
+    st.caption(
+        "The circle marks current soil salinity and the diamond marks the leaching target. "
+        "Plans with the same crop salinity response can have overlapping curves. "
+        "Changes to effective rainfall appear in the irrigation comparison."
+    )
+    st.caption("At 100% relative yield, the calculated target is the crop’s salinity threshold. "
+               "See **Target basis** below for the value used in each plan.")
+
+    st.header(f"Seasonal irrigation for {field_name}")
+    st.altair_chart(water_demand_chart([
+        {"Plan": label, "Scenario name": name, "Crop": result.field.crop.label,
+         "Crop-only (AF)": result.crop_only_af, "Extra leaching (AF)": result.added_leach_field_af}
+        for label, name, result in options
+    ], row_label="Scenario", details=("Scenario name", "Crop")), width="stretch")
+    undetermined = [label for label, _, result in options if result.field_af is None]
+    if undetermined:
+        st.warning(plain_text(f"Irrigation demand is undetermined for: {', '.join(undetermined)}."))
+
+    st.subheader(f"{field_name} results by scenario")
+    st.dataframe([
+        {
+            "Scenario": label, "Crop": result.field.crop.label, "Current salinity (dS/m)": result.field.current_ece_ds_m,
+            "Crop threshold (dS/m)": result.field.crop.threshold_ds_m,
+            "Leaching target (dS/m)": result.field.target_ece_ds_m, "Target basis": target_basis(result.field),
+            "Total irrigation (AF)": result.field_af, "Scenario name": name,
+            "Required drainage below roots (in)": result.depths.theoretical_leach_in if result.maintenance_assessable else None,
+            "Maintenance leaching": coverage[label],
+            "Estimated yield (%)": result.current_yield_pct, "Yield lost (%)": 100 - result.current_yield_pct,
+            "Crop ET (in)": result.field.etc_in, "Effective precipitation (in)": result.field.effective_rain_in,
+            "Water source": result.source.id, "Notes": " ".join(result.warnings),
+        }
+        for label, name, result in options
+    ], hide_index=True, width="stretch", column_config={
+        "Leaching target (dS/m)": st.column_config.NumberColumn(format="%.2f", help=TARGET_ECE_HELP),
+        "Required drainage below roots (in)": st.column_config.NumberColumn(
+            format="%.2f", help="Estimated effective drainage through the root zone needed for maintenance. "
+                                "Extra applied irrigation also accounts for field losses and credited drainage.",
+        ),
+    })
+elif not shown:
+    st.info("Select a saved plan to see its field results.")
+
+if state["reviewed"]:
+    display_names = {key: scenario_label(key, include_name=True) for key in matches}
+    editing_options = [key for key in matches if key != first]
+    if first in matches:
+        editing_options.insert(0, None)
+    target = st.selectbox(
+        "Scenario to edit", editing_options,
+        format_func=lambda key: display_names[key] if key else "New scenario from baseline",
+        key=ui_key(f"edit-field-scenario/{selected}/{tuple(editing_options)}"),
+    )
+    if st.button("Edit this field in a scenario", type="primary"):
+        start_scenario_editor(target or first, target or identifier(), field_id=selected)
+        st.switch_page("pages/scenarios.py")
+if st.button("Edit farm inputs in Farm Setup"):
+    st.switch_page("pages/farm_setup.py")

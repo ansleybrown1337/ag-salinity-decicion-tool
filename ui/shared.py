@@ -58,8 +58,9 @@ CREDIT_HELP = ref_help(
     "Use 0% when you cannot estimate that share.",
 )
 TARGET_ECE_HELP = ref_help(
-    "fao29", "The soil salinity objective used to estimate water needed to control salt buildup. "
-    "At a 100% yield goal, the automatic target is the crop’s threshold for yield loss.",
+    "fao29", "The root-zone salinity used to estimate maintenance leaching. The default 100% relative yield "
+    "uses the crop’s salinity threshold. A lower relative yield uses the crop’s response curve to calculate "
+    "the corresponding salinity. Enter a manual target when you have a specific planning value.",
 )
 NET_DEFICIT_HELP = ref_help(
     "csu-seasonal-et", "Seasonal crop water use minus the rain available to meet it. This is the amount "
@@ -103,19 +104,27 @@ def reference_link(reference, label=None):
     return f"{plain_text(reference.citation)} [Source](<{url}>)"
 
 
-def current_scenario():
-    scenario, errors = validate_scenario(active())
+def target_basis(field):
+    if field.target_ece_override:
+        return "Manually entered"
+    return f"Calculated at {field.desired_yield_pct:g}% relative yield"
+
+
+def require_scenario(draft):
+    scenario, errors = validate_scenario(draft)
     if errors:
         st.warning("Complete the field and water source entries to calculate this scenario.")
         errors_panel(errors)
-        st.page_link("pages/farm_setup.py", label="Farm Setup")
+        if st.button("Go to Farm Setup"):
+            st.switch_page("pages/farm_setup.py")
         return None
     return scenario
 
 
-def scenario_caption():
+def scenario_caption(draft=None):
     state = workspace()
-    st.caption(plain_text(f"{state['farm_name'] or 'Untitled farm'} · {state['planning_year']} · {active()['name']}"))
+    draft = active() if draft is None else draft
+    st.caption(plain_text(f"{state['farm_name'] or 'Untitled farm'} · {state['planning_year']} · {draft['name']}"))
 
 
 def volume(value, signed=False):
@@ -147,7 +156,7 @@ def reset_entry(revision_key):
 
 
 def field_rows(result):
-    assessments = {row.source.id: row.assessment for row in result.sources}
+    sources = {row.source.id: row for row in result.sources}
     return [
         {
             "Field ID": row.field.id, "Crop": row.field.crop.label,
@@ -157,7 +166,9 @@ def field_rows(result):
             "Target ECe (dS/m)": row.field.target_ece_ds_m, "LR (%)": row.lr * 100 if row.lr is not None else None,
             "Gross field depth (in)": row.depths.gross_in if row.depths else None,
             "Gross field volume (AF)": row.field_af,
-            "Source assessment": assessments[row.source.id], "Salinity and model notes": " ".join(row.warnings),
+            "Assigned source assessment": sources[row.source.id].assessment,
+            "Maintenance leaching": sources[row.source.id].field_leaching_status(row),
+            "Salinity and model notes": " ".join(row.warnings),
         }
         for row in result.fields
     ]
@@ -167,6 +178,9 @@ def source_rows(result):
     return [
         {
             "Source ID": row.source.id, "Expected farm delivery (AF)": row.source.delivery_af,
+            "Assigned fields": ", ".join(item.field.id for item in row.fields),
+            "Crop-only irrigation (AF)": row.crop_only_af, "Extra leaching needed (AF)": row.extra_leaching_af,
+            "Leaching gap (AF)": row.leaching_gap_af, "Leaching coverage": row.leaching_status,
             "Demand (AF)": row.demand_af, "Known demand (AF)": row.known_demand_af,
             "Balance (AF)": row.balance_af, "Assessment": row.assessment,
         }

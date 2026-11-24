@@ -34,6 +34,7 @@ def install_plan(plan: FarmPlan):
         "reviewed": True,
     }
     st.session_state.pop("selected_field", None)
+    assign_scenario_numbers()
 
 
 def initialize():
@@ -44,6 +45,8 @@ def initialize():
             "scenarios": {"baseline": {"id": "baseline", "name": "Baseline", "fields": [], "sources": []}},
             "references": dict(REFERENCES), "epoch": identifier(), "reviewed": False,
         }
+    if "next_scenario_number" not in workspace():
+        assign_scenario_numbers()
 
 
 def workspace():
@@ -55,8 +58,68 @@ def active():
     return state["scenarios"][state["active_scenario_id"]]
 
 
+def baseline_id():
+    scenarios = workspace()["scenarios"]
+    return "baseline" if "baseline" in scenarios else next(iter(scenarios))
+
+
+def scenario_ids():
+    first = baseline_id()
+    return [first, *(key for key in workspace()["scenarios"] if key != first)]
+
+
+def assign_scenario_numbers():
+    state = workspace()
+    alternatives = [state["scenarios"][key] for key in scenario_ids()[1:]]
+    used = {draft["number"] for draft in state["scenarios"].values() if draft.get("number") is not None}
+    number = 1
+    for draft in alternatives:
+        if draft.get("number") is None:
+            while number in used:
+                number += 1
+            draft["number"] = number
+            used.add(number)
+    state["next_scenario_number"] = max(used, default=0) + 1
+
+
+def scenario_label(scenario_id, *, include_name=False):
+    if scenario_id == baseline_id():
+        return "Baseline"
+    draft = workspace()["scenarios"][scenario_id]
+    label = f"Scenario {draft['number']}"
+    return f"{label} · {draft['name']}" if include_name else label
+
+
+def field_names():
+    names = {}
+    for scenario_id in scenario_ids():
+        for field in workspace()["scenarios"][scenario_id]["fields"]:
+            names.setdefault(field["id"].casefold(), field["id"])
+    return names
+
+
 def ui_key(name):
     return f"{workspace()['epoch']}/{active()['id']}/{name}"
+
+
+def start_scenario_editor(template_id, scenario_id, *, field_id=None):
+    st.session_state[ui_key("scenario-editor")] = {
+        "template_id": template_id, "id": scenario_id, "key": identifier(), "field_id": field_id,
+    }
+
+
+def save_scenario(scenario_id, name, fields, sources):
+    state = workspace()
+    scenarios = state["scenarios"]
+    if any(draft["name"].casefold() == name.casefold() and key != scenario_id for key, draft in scenarios.items()):
+        raise ValueError("Choose a unique scenario name.")
+    if scenario_id == baseline_id():
+        raise ValueError("Edit the baseline in Farm Setup.")
+    number = scenarios[scenario_id]["number"] if scenario_id in scenarios else state["next_scenario_number"]
+    scenario = Scenario(id=scenario_id, name=name, number=number, fields=fields, sources=sources)
+    scenarios[scenario_id] = as_draft(scenario)
+    state["next_scenario_number"] = max(state["next_scenario_number"], number + 1)
+    return scenario
 
 
 def activate(scenario_id):
@@ -127,7 +190,7 @@ def validate_scenario(draft):
     if errors:
         return None, errors
     try:
-        return Scenario(id=draft["id"], name=draft["name"], fields=fields, sources=sources), []
+        return Scenario(id=draft["id"], name=draft["name"], number=draft.get("number"), fields=fields, sources=sources), []
     except ValidationError as error:
         return None, describe_errors(error)
 

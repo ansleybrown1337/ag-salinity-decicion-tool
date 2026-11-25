@@ -57,6 +57,7 @@ if missing:
 options = []
 positions = []
 coverage = {}
+planned_irrigation = {}
 for scenario_id in shown:
     draft, row = matches[scenario_id]
     try:
@@ -73,11 +74,16 @@ for scenario_id in shown:
         positions.append(0 if scenario_id == first else draft["number"])
         plan, _ = validate_scenario(draft)
         if plan is None:
-            coverage[label] = "Maintenance coverage undetermined"
+            coverage[label] = "Leaching coverage undetermined"
+            selected_fields = draft.get("leaching_field_ids")
+            planned_irrigation[label] = (
+                result.crop_only_af if selected_fields is not None and field.id not in selected_fields else result.field_af
+            )
         else:
             farm_sources = evaluate_scenario(plan).sources
             source_result = next(item for item in farm_sources if item.source.id == result.source.id)
             coverage[label] = source_result.field_leaching_status(result)
+            planned_irrigation[label] = source_result.planned_field_af(result)
 
 if options:
     st.header("Yield response to salinity")
@@ -93,10 +99,12 @@ if options:
     st.header(f"Seasonal irrigation for {field_name}")
     st.altair_chart(water_demand_chart([
         {"Plan": label, "Scenario name": name, "Crop": result.field.crop.label,
-         "Crop-only (AF)": result.crop_only_af, "Extra leaching (AF)": result.added_leach_field_af}
+         "Crop-only (AF)": result.crop_only_af,
+         "Extra leaching (AF)": max(0.0, planned_irrigation[label] - result.crop_only_af)
+         if planned_irrigation[label] is not None else None}
         for label, name, result in options
     ], row_label="Scenario", details=("Scenario name", "Crop")), width="stretch")
-    undetermined = [label for label, _, result in options if result.field_af is None]
+    undetermined = [label for label, demand in planned_irrigation.items() if demand is None]
     if undetermined:
         st.warning(plain_text(f"Irrigation demand is undetermined for: {', '.join(undetermined)}."))
 
@@ -106,9 +114,9 @@ if options:
             "Scenario": label, "Crop": result.field.crop.label, "Current salinity (dS/m)": result.field.current_ece_ds_m,
             "Crop threshold (dS/m)": result.field.crop.threshold_ds_m,
             "Leaching target (dS/m)": result.field.target_ece_ds_m, "Target basis": target_basis(result.field),
-            "Total irrigation (AF)": result.field_af, "Scenario name": name,
+            "Planned irrigation (AF)": planned_irrigation[label], "Scenario name": name,
             "Required drainage below roots (in)": result.depths.theoretical_leach_in if result.maintenance_assessable else None,
-            "Maintenance leaching": coverage[label],
+            "Salinity leaching": coverage[label],
             "Estimated yield (%)": result.current_yield_pct, "Yield lost (%)": 100 - result.current_yield_pct,
             "Crop ET (in)": result.field.etc_in, "Effective precipitation (in)": result.field.effective_rain_in,
             "Water source": result.source.id, "Notes": " ".join(result.warnings),

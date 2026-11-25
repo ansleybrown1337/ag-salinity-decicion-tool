@@ -22,7 +22,8 @@ with st.container(border=True):
         "2. **Farm Dashboard.** Review water supply and estimated yield loss for your baseline plan.\n"
         "3. **What-If Scenarios.** Save and compare alternate crop or rainfall plans.\n"
         "4. **Field Details.** Select a field in the sidebar to see what drives its results across plans.\n"
-        "5. **Optimization (experimental).** Compare crop plans for gross revenue with and without a maintenance leaching requirement."
+        "5. **Optimization (experimental).** Compare crop plans for gross revenue with and without required leaching on selected fields.\n"
+        "6. **Download Full Report.** Save the farm report, or download a farm plan with your optimization inputs and comparisons."
     )
     with st.container(horizontal=True):
         if st.button("Get started", type="primary"):

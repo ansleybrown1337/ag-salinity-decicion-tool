@@ -10,7 +10,9 @@ from pydantic import ValidationError
 from config.branding import ROOT, VERSION
 from data.catalog import REFERENCES
 from models.crop_response import target_ece
-from schemas.farm import DEFAULT_DESIRED_YIELD_PCT, SCHEMA_VERSION, FarmPlan, FieldPlan, Scenario, WaterSource, load_plan
+from schemas.farm import (
+    DEFAULT_DESIRED_YIELD_PCT, SCHEMA_VERSION, FarmPlan, FieldPlan, OptimizationArchive, Scenario, WaterSource, load_plan,
+)
 
 
 def identifier():
@@ -25,6 +27,7 @@ def as_draft(scenario: Scenario) -> dict:
 
 
 def install_plan(plan: FarmPlan):
+    optimization = plan.optimization or OptimizationArchive()
     st.session_state.workspace = {
         "farm_name": plan.farm_name, "planning_year": plan.planning_year, "notes": plan.notes,
         "active_scenario_id": plan.active_scenario_id,
@@ -32,6 +35,11 @@ def install_plan(plan: FarmPlan):
         "references": {**REFERENCES, **plan.references},
         "epoch": identifier(),
         "reviewed": True,
+        "optimization": {
+            "starting-plan": optimization.starting_plan_id,
+            "inputs": {settings.starting_plan_id: settings for settings in optimization.inputs},
+            "runs": list(optimization.runs),
+        },
     }
     st.session_state.pop("selected_field", None)
     assign_scenario_numbers()
@@ -108,7 +116,7 @@ def start_scenario_editor(template_id, scenario_id, *, field_id=None):
     }
 
 
-def save_scenario(scenario_id, name, fields, sources):
+def save_scenario(scenario_id, name, fields, sources, *, leaching_field_ids=None):
     state = workspace()
     scenarios = state["scenarios"]
     if any(draft["name"].casefold() == name.casefold() and key != scenario_id for key, draft in scenarios.items()):
@@ -116,7 +124,8 @@ def save_scenario(scenario_id, name, fields, sources):
     if scenario_id == baseline_id():
         raise ValueError("Edit the baseline in Farm Setup.")
     number = scenarios[scenario_id]["number"] if scenario_id in scenarios else state["next_scenario_number"]
-    scenario = Scenario(id=scenario_id, name=name, number=number, fields=fields, sources=sources)
+    scenario = Scenario(id=scenario_id, name=name, number=number, fields=fields, sources=sources,
+                        leaching_field_ids=leaching_field_ids)
     scenarios[scenario_id] = as_draft(scenario)
     state["next_scenario_number"] = max(state["next_scenario_number"], number + 1)
     return scenario
@@ -190,7 +199,8 @@ def validate_scenario(draft):
     if errors:
         return None, errors
     try:
-        return Scenario(id=draft["id"], name=draft["name"], number=draft.get("number"), fields=fields, sources=sources), []
+        return Scenario(id=draft["id"], name=draft["name"], number=draft.get("number"), fields=fields, sources=sources,
+                        leaching_field_ids=draft.get("leaching_field_ids")), []
     except ValidationError as error:
         return None, describe_errors(error)
 
@@ -208,10 +218,15 @@ def validated_plan():
     if messages:
         return None, messages
     try:
+        optimization = state.get("optimization", {})
+        inputs = tuple(settings for key, settings in optimization.get("inputs", {}).items() if key in state["scenarios"])
+        runs = tuple(optimization.get("runs", ()))
+        archive = OptimizationArchive(starting_plan_id=optimization.get("starting-plan"), inputs=inputs, runs=runs)
         return FarmPlan(
             schema_version=SCHEMA_VERSION, app_version=VERSION,
             farm_name=state["farm_name"], planning_year=state["planning_year"], notes=state["notes"],
             active_scenario_id=state["active_scenario_id"], scenarios=scenarios, references=state["references"],
+            optimization=archive if inputs or runs else None,
         ), []
     except ValidationError as error:
         return None, describe_errors(error)

@@ -43,6 +43,7 @@ class FieldResult:
 class SourceResult:
     source: WaterSource
     fields: tuple[FieldResult, ...]
+    leaching_field_ids: frozenset[str] | None = None
 
     @property
     def demand_af(self):
@@ -56,6 +57,26 @@ class SourceResult:
     @property
     def crop_only_af(self):
         return fsum(field.crop_only_af for field in self.fields)
+
+    def planned_field_af(self, field: FieldResult) -> float | None:
+        if self.leaching_field_ids is None:
+            return field.field_af
+        if field.field.id not in self.leaching_field_ids:
+            return field.crop_only_af
+        return field.field_af if field.maintenance_assessable else None
+
+    @property
+    def planned_demand_af(self):
+        volumes = [self.planned_field_af(field) for field in self.fields]
+        return fsum(volumes) if None not in volumes else None
+
+    @property
+    def planned_shortfall_af(self):
+        known = fsum(
+            field.crop_only_af if (planned := self.planned_field_af(field)) is None else planned
+            for field in self.fields
+        )
+        return max(0.0, known - self.source.delivery_af)
 
     @property
     def extra_leaching_af(self):
@@ -79,19 +100,22 @@ class SourceResult:
             return "Short before leaching"
         gap = self.leaching_gap_af
         if gap is None:
-            return "Maintenance coverage undetermined"
+            return "Leaching coverage undetermined"
         if gap > WATER_TOLERANCE_AF:
             return "Covers crops with a leaching gap"
         return "Covers crops and leaching"
 
     def field_leaching_status(self, field: FieldResult) -> str:
         if not field.maintenance_assessable:
-            return "Maintenance coverage undetermined"
+            return "Leaching coverage undetermined"
         if field.lr == 0:
-            return "No maintenance leaching required"
-        balance = self.balance_af
-        if balance is not None and balance >= -WATER_TOLERANCE_AF:
-            return "Maintenance leaching covered"
+            return "No salinity leaching required"
+        planned = self.planned_demand_af
+        if planned is not None and planned - self.source.delivery_af <= WATER_TOLERANCE_AF:
+            if (self.leaching_field_ids is None or field.field.id in self.leaching_field_ids
+                    or field.added_leach_field_af <= WATER_TOLERANCE_AF):
+                return "Salinity leaching covered"
+            return "Leaching gap"
         if len(self.fields) > 1:
             return "Field allocation needed"
         return "Leaching gap"
@@ -136,6 +160,25 @@ class FarmResult:
     @property
     def field_demand_af(self):
         return self.complete_sum("field_af")
+
+    @property
+    def planned_demand_af(self):
+        volumes = [source.planned_demand_af for source in self.sources]
+        return fsum(volumes) if None not in volumes else None
+
+    @property
+    def planned_extra_leaching_af(self):
+        demand = self.planned_demand_af
+        return max(0.0, demand - self.complete_sum("crop_only_af")) if demand is not None else None
+
+    @property
+    def planned_balance_af(self):
+        demand = self.planned_demand_af
+        return self.field_supply_af - demand if demand is not None else None
+
+    @property
+    def planned_shortfall_af(self):
+        return fsum(source.planned_shortfall_af for source in self.sources)
 
     @property
     def field_balance_af(self):
@@ -221,4 +264,5 @@ def evaluate_scenario(scenario: Scenario) -> FarmResult:
     assigned = {source_id: [] for source_id in sources}
     for result in fields:
         assigned[result.source.id].append(result)
-    return FarmResult(fields, tuple(SourceResult(sources[key], tuple(rows)) for key, rows in assigned.items()))
+    selected = None if scenario.leaching_field_ids is None else frozenset(scenario.leaching_field_ids)
+    return FarmResult(fields, tuple(SourceResult(sources[key], tuple(rows), selected) for key, rows in assigned.items()))

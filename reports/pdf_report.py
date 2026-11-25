@@ -9,6 +9,7 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.graphics.shapes import Drawing, Line, Rect, String
 from reportlab.platypus import CondPageBreak, Image, LongTable, PageBreak, Paragraph, SimpleDocTemplate, Spacer, TableStyle
 
 from config.branding import (
@@ -16,6 +17,8 @@ from config.branding import (
     logo_path,
 )
 from data.catalog import REFERENCES
+from models.optimization import MODE, crop_shortfalls, excluded_starting_crops, reference_label
+from models.water_budget import evaluate_scenario
 
 
 def _number(value, places=1):
@@ -50,14 +53,11 @@ def _footer(canvas, doc):
     canvas.restoreState()
 
 
-def management_report(farm_name, year, notes, scenario, result, references, *, generated=None):
+def management_report(farm_name, year, notes, scenario, result, references, *, generated=None, optimization_runs=()):
     """Generate a printable PDF in memory for the selected scenario and its results."""
     generated = generated or date.today()
     output = BytesIO()
-    doc = SimpleDocTemplate(
-        output, pagesize=letter, title=f"{TITLE} - {farm_name}", author=CREATOR,
-        leftMargin=43, rightMargin=43, topMargin=41, bottomMargin=54,
-    )
+    doc = _document(output, f"{TITLE} - {farm_name}")
     green = colors.HexColor(DARK_GREEN)
     brown = colors.HexColor(BROWN)
     title = ParagraphStyle("ReportTitle", fontName="Helvetica-Bold", fontSize=27, leading=33,
@@ -97,14 +97,24 @@ def management_report(farm_name, year, notes, scenario, result, references, *, g
         ("Total acreage / number of fields", f"{result.acres:,.1f} ac / {len(result.fields)}"),
         ("Expected farm delivery", f"{result.field_supply_af:,.1f} AF"),
         ("Net crop water deficit", f"{result.net_crop_af:,.1f} AF"),
-        ("Extra gross field water for maintenance (AF)", _number(result.complete_sum("added_leach_field_af"))),
-        ("Total planned field irrigation demand (AF)", _number(result.field_demand_af)),
-        ("Combined field surplus (+) / deficit (-), AF", _number(result.field_balance_af)),
-        ("Known assigned-source shortfall", f"{result.source_shortfall_af:,.1f} AF"),
+        ("Extra field water budgeted for salinity leaching (AF)", _number(result.planned_extra_leaching_af)),
+        ("Total planned field irrigation demand (AF)", _number(result.planned_demand_af)),
+        ("Combined field surplus (+) / deficit (-), AF", _number(result.planned_balance_af)),
+        ("Known assigned-source shortfall", f"{result.planned_shortfall_af:,.1f} AF"),
     ], [330, 184])
     paragraph("Management interpretation", h2)
-    paragraph(result.allocation_conclusion)
-    if result.field_demand_af is not None:
+    if scenario.leaching_field_ids is None:
+        paragraph(result.allocation_conclusion)
+    else:
+        selected = ", ".join(scenario.leaching_field_ids) or "None"
+        paragraph(f"Fields budgeted for leaching: {selected}.")
+        if result.planned_shortfall_af > 0:
+            paragraph("At least one water source falls short of its planned irrigation demand.")
+        elif result.planned_demand_af is None:
+            paragraph("Some planned leaching requirements could not be estimated.")
+        else:
+            paragraph("Expected delivery covers the planned irrigation budget at each assigned source.")
+    if scenario.leaching_field_ids is None and result.field_demand_af is not None:
         lower = result.complete_sum("all_credit_field_af")
         upper = result.complete_sum("zero_credit_field_af")
         paragraph(f"Field demand sensitivity to effective leaching credit ranges from {lower:,.1f} AF at full "
@@ -120,22 +130,24 @@ def management_report(farm_name, year, notes, scenario, result, references, *, g
 
     story.append(PageBreak())
     paragraph("Water budget by source", table_heading)
-    table(["Water source ID", "Farm delivery (AF)", "Demand (AF)", "Balance (AF)", "Assessment"], [
+    table(["Water source ID", "Farm delivery (AF)", "Planned (AF)", "Balance (AF)", "Leaching capacity"], [
         (row.source.id, _number(row.source.delivery_af),
-         _number(row.demand_af) if row.demand_af is not None else f"{row.known_demand_af:,.1f} known",
-         _number(row.balance_af), row.assessment)
+         _number(row.planned_demand_af),
+         _number(row.source.delivery_af - row.planned_demand_af) if row.planned_demand_af is not None else "Undetermined",
+         row.leaching_status)
         for row in result.sources
     ], [173, 68, 78, 78, 117])
     story.append(CondPageBreak(120))
     paragraph("Field salinity and irrigation results", table_heading)
+    sources = {row.source.id: row for row in result.sources}
     table(["Field / crop", "Area (ac)", "Current / target ECe (dS/m)", "Current / desired yield (%)",
-           "LR (%)", "Gross depth (in)", "Field volume (AF)"], [
+           "LR (%)", "Gross depth with leaching (in)", "Planned field volume (AF)"], [
         (f"{row.field.id} / {row.field.crop.label}", _number(row.field.acres),
          f"{row.field.current_ece_ds_m:.2f} / {row.field.target_ece_ds_m:.2f}",
          f"{row.current_yield_pct:.1f} / {row.field.desired_yield_pct:g}",
          _number(row.lr * 100, 2) if row.lr is not None else "Infeasible",
          _number(row.depths.gross_in) if row.depths else "—",
-         _number(row.field_af))
+         _number(sources[row.source.id].planned_field_af(row)))
         for row in result.fields
     ], [153, 42, 74, 77, 47, 53, 68])
 
@@ -195,5 +207,116 @@ def management_report(farm_name, year, notes, scenario, result, references, *, g
         citation = escape(f"{key} | {reference.citation}")
         story.append(Paragraph(f"{citation}<br/><link href={safe_url} color={quoteattr(BROWN)}>"
                                f"{escape(reference.url)}</link>", bibliography))
+    for number, run in enumerate(optimization_runs, 1):
+        story.append(PageBreak())
+        story.extend(_optimization_story(run, title=f"Optimization comparison - Run {number}"))
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     return output.getvalue()
+
+
+def _document(output, title):
+    return SimpleDocTemplate(output, pagesize=letter, title=title, author=CREATOR,
+                             leftMargin=43, rightMargin=43, topMargin=41, bottomMargin=54)
+
+
+def optimization_report(farm_name, year, run, *, generated=None):
+    generated = generated or date.today()
+    output = BytesIO()
+    title = "Optimization comparison"
+    doc = _document(output, f"{TITLE} - {title} - {farm_name}")
+    story = _optimization_story(run, title=title, subtitle=f"{farm_name or 'Farm'} | {year} planning year | "
+                                                          f"Generated {generated.isoformat()}")
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    return output.getvalue()
+
+
+def _optimization_story(run, *, title, subtitle=None):
+    dark = colors.HexColor(DARK_GREEN)
+    green = colors.HexColor(LIGHT_GREEN)
+    brown = colors.HexColor(BROWN)
+    body = ParagraphStyle("OptimizationBody", fontName="Helvetica", fontSize=10, leading=14,
+                          textColor=dark, spaceAfter=8)
+    heading = ParagraphStyle("OptimizationHeading", parent=body, fontName="Helvetica-Bold",
+                             fontSize=14, leading=18, spaceBefore=10, keepWithNext=True)
+    main = ParagraphStyle("OptimizationTitle", parent=heading, fontSize=24, leading=29, spaceBefore=0)
+    cell = ParagraphStyle("OptimizationCell", parent=body, fontSize=8, leading=10.5, spaceAfter=0)
+    header = ParagraphStyle("OptimizationHeader", parent=cell, fontName="Helvetica-Bold", textColor=colors.white)
+    story = []
+
+    def paragraph(text, style=body):
+        story.append(Paragraph(escape(text), style))
+
+    def table(headers, rows, widths):
+        story.append(_table(headers, rows, widths, cell, header))
+        story.append(Spacer(1, 7))
+
+    paragraph(title, main)
+    if subtitle:
+        paragraph(subtitle)
+    paragraph(f"Starting plan: {run.starting_plan.name} | Model v{run.model_version} | "
+              f"Run completed {run.completed_at:%Y-%m-%d %H:%M:%S %z}")
+    selected = ", ".join(run.settings.leaching_field_ids) or "None"
+    paragraph(f"Fields requiring salinity leaching: {selected}. Gross revenue is before production costs. "
+              "The model estimates yield at the entered soil salinity and applies water limits separately to each source.")
+
+    comparisons = []
+    references = [("Starting plan", run.starting_plan, run.starting_revenue)]
+    if run.baseline:
+        references.insert(0, ("Baseline", run.baseline, run.baseline_revenue))
+    for label, scenario, revenue in references:
+        result = evaluate_scenario(scenario)
+        if shortfalls := crop_shortfalls(result):
+            limits = ", ".join(f"{source} ({gap:,.1f} AF)" for source, gap in shortfalls.items())
+            paragraph(f"{label} is a full-irrigation benchmark. Crop water demand exceeds delivery at {limits}.")
+        comparisons.append((reference_label(label, result), scenario, result, revenue, bool(shortfalls)))
+    if excluded := excluded_starting_crops(run):
+        paragraph("Starting crops excluded from the search: "
+                  + ", ".join(f"{field} ({crop})" for field, crop in excluded.items()) + ".")
+    for outcome in run.outcomes:
+        label = MODE[outcome.requires_leaching]
+        if outcome.plan:
+            comparisons.append((label, outcome.plan, evaluate_scenario(outcome.plan), outcome.gross_revenue, False))
+        else:
+            paragraph(f"{label}: " + " ".join(outcome.diagnostics))
+
+    paragraph("Estimated gross revenue", heading)
+    chart = Drawing(510, 28 * len(comparisons) + 6)
+    scale = max(1.0, *(revenue for _, _, _, revenue, _ in comparisons))
+    for index, (label, _, _, revenue, benchmark) in enumerate(comparisons):
+        y = 28 * (len(comparisons) - index - 1) + 10
+        chart.add(String(0, y + 3, label, fontName="Helvetica", fontSize=8, fillColor=dark))
+        chart.add(Line(194, y + 6, 395, y + 6, strokeColor=colors.HexColor(PALE_GREEN)))
+        chart.add(Rect(194, y, 201 * (revenue / scale), 12, fillColor=brown if benchmark else green, strokeColor=None))
+        chart.add(String(506, y + 2, f"${revenue:,.0f}", textAnchor="end", fontName="Helvetica-Bold",
+                         fontSize=9, fillColor=dark))
+    story.append(chart)
+
+    paragraph("Irrigation by source (acre-feet)", heading)
+    table(["Plan", "Source", "Delivery", "Crop water", "Extra leaching budgeted", "Planned total"], [
+        (label, source.source.id, _number(source.source.delivery_af), _number(source.crop_only_af),
+         _number(source.planned_demand_af - source.crop_only_af) if source.planned_demand_af is not None else "Undetermined",
+         _number(source.planned_demand_af))
+        for label, _, result, _, _ in comparisons for source in result.sources
+    ], [135, 88, 60, 67, 83, 81])
+
+    paragraph("Crop choices and yield at current soil salinity", heading)
+    table(["Field", "Plan", "Crop", "Current ECe (dS/m)", "Estimated yield (%)", "Leaching coverage"], [
+        (field.field.id, label, field.field.crop.label, _number(field.field.current_ece_ds_m, 2),
+         _number(field.current_yield_pct), source.field_leaching_status(field))
+        for label, _, result, _, _ in comparisons for source in result.sources for field in source.fields
+    ], [76, 120, 94, 62, 62, 100])
+
+    paragraph("Optimization inputs", heading)
+    quote_labels = {key: quote.crop.label for key, quote in run.settings.quotes_by_crop.items()}
+    table(["Field", "Eligible crops", "Leaching required"], [
+        (field, ", ".join(quote_labels.get(key, key[0]) for key in keys), "Yes" if field in run.settings.leaching_field_ids else "No")
+        for field, keys in run.settings.eligible.items()
+    ], [105, 315, 94])
+    table(["Crop", "Sale unit", "Yield per acre without salinity loss", "Price per unit ($)", "Replacement crop ET (in)"], [
+        (quote.crop.label, quote.unit, _number(quote.expected_yield, 3), _number(quote.price, 2),
+         _number(quote.alternative_et_in, 2) if quote.alternative_et_in is not None else "Uses saved field ET")
+        for quote in sorted(run.settings.quotes, key=lambda row: row.crop.label.casefold())
+    ], [137, 82, 104, 81, 110])
+    paragraph("Replacement crop ET applies when the selected crop differs from the starting crop. The leaching "
+              "calculation uses each candidate crop's salinity threshold and assumes effective drainage.")
+    return story

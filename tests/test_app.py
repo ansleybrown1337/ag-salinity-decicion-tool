@@ -6,6 +6,8 @@ from copy import deepcopy
 from streamlit.testing.v1 import AppTest
 
 from config.branding import CONTACT_URL, COPYRIGHT_YEAR, LICENSE, REPOSITORY_URL, ROOT, TITLE
+from schemas.farm import export_plan, load_plan
+from ui.state import validated_plan
 
 
 def button(app, label):
@@ -52,6 +54,7 @@ def test_home_guides_new_users_to_farm_setup():
     assert "2. **Farm Dashboard.**" in guide
     assert "3. **What-If Scenarios.**" in guide
     assert "4. **Field Details.**" in guide
+    assert "6. **Download Full Report.**" in guide
     assert any(CONTACT_URL in item.value for item in app.markdown)
     assert any(f"{REPOSITORY_URL.rstrip('/')}/issues" in item.value for item in app.markdown)
     button(app, "Get started").click().run()
@@ -83,7 +86,7 @@ def test_demo_renders_all_pages_and_field_details_compare_saved_plans():
     app = resume_workspace(app)
     for path, title in (
         ("scenarios", "What-If Scenarios"), ("about", "About & Methods"),
-        ("field_decisions", "Field Details"), ("farm_dashboard", "Farm Dashboard"),
+        ("field_decisions", "Field Details"), ("reports", "Download Full Report"), ("farm_dashboard", "Farm Dashboard"),
     ):
         app.switch_page(f"pages/{path}.py").run()
         assert app.title[0].value == title
@@ -97,7 +100,7 @@ def test_demo_renders_all_pages_and_field_details_compare_saved_plans():
     assert list(rows["Crop"]) == ["Corn, silage", "Barley, grain"]
     assert list(rows["Scenario name"]) == ["Baseline", "Barley on East Bench"]
     assert list(rows["Target basis"]) == ["Calculated at 90% relative yield"] * 2
-    assert rows.iloc[0]["Total irrigation (AF)"] != rows.iloc[1]["Total irrigation (AF)"]
+    assert rows.iloc[0]["Planned irrigation (AF)"] != rows.iloc[1]["Planned irrigation (AF)"]
     app.session_state.workspace["scenarios"]["barley-alternative"]["fields"][-1]["target_ece_override"] = True
     app.run()
     assert list(app.get("dataframe")[0].value["Target basis"]) == ["Calculated at 90% relative yield", "Manually entered"]
@@ -169,6 +172,10 @@ def test_optimization_saves_a_numbered_alternative_and_keeps_the_baseline():
     app = resume_workspace(load_demonstration()).switch_page("pages/optimization.py").run()
     state = app.session_state.workspace
     existing_fields = deepcopy(state["scenarios"]["baseline"]["fields"])
+    widget(app.checkbox, "Require adequate leaching on every field").uncheck().run()
+    assert not widget(app.checkbox, "Require adequate leaching for North Bench").value
+    widget(app.checkbox, "Require adequate leaching for East Bench").check().run()
+    assert not widget(app.checkbox, "Require adequate leaching on every field").value
     widget(app.multiselect, "Eligible crops for East Bench").set_value([("corn_silage",), ("barley",)]).run()
     for label, unit, expected_yield, price in (
         ("Alfalfa", "dry ton", 6.0, 180.0), ("Barley, grain", "bu", 110.0, 4.0),
@@ -179,14 +186,58 @@ def test_optimization_saves_a_numbered_alternative_and_keeps_the_baseline():
         widget(app.number_input, f"Sale price ($/unit) for {label}").set_value(price)
     button(app, "Run optimization").click().run()
     assert not app.exception
+    assert any("East Well by 11.2 AF" in item.value for item in app.warning)
+    first_run = state["optimization"]["runs"][0]
+    assert first_run.settings.leaching_field_ids == ("East Bench",)
+    assert first_run.outcomes[0].plan.fields[-1].crop.id == "barley"
+    widget(app.selectbox, "Result to save").set_value(True)
     widget(app.text_input, "Optimized scenario name").set_value("Optimized demo")
     button(app, "Save as what-if scenario").click().run()
     assert app.title[0].value == "What-If Scenarios"
     saved = next(scenario for scenario in state["scenarios"].values() if scenario["name"] == "Optimized demo")
     assert saved["number"] == 2
     assert saved["fields"][-1]["crop"]["id"] == "barley"
-    assert saved["fields"][-1]["target_ece_ds_m"] == existing_fields[-1]["target_ece_ds_m"]
+    assert saved["fields"][-1]["target_ece_ds_m"] == saved["fields"][-1]["crop"]["threshold_ds_m"]
+    assert saved["leaching_field_ids"] == ("East Bench",)
     assert state["scenarios"]["baseline"]["fields"] == existing_fields
+
+
+def test_optimization_history_restores_original_inputs_and_results_after_json_round_trip(monkeypatch):
+    app = resume_workspace(load_demonstration()).switch_page("pages/optimization.py").run()
+    widget(app.multiselect, "Eligible crops for East Bench").set_value([("barley",)]).run()
+    for label in ("Alfalfa", "Barley, grain", "Corn, silage"):
+        widget(app.text_input, f"Sale unit for {label}").set_value("test unit")
+        widget(app.number_input, f"Expected yield per acre for {label}").set_value(5.0)
+        widget(app.number_input, f"Sale price ($/unit) for {label}").set_value(10.0)
+    widget(app.number_input, "Alternative seasonal ET for Barley, grain (in)").set_value(21.7)
+    button(app, "Run optimization").click().run()
+    widget(app.number_input, "Sale price ($/unit) for Barley, grain").set_value(12.0)
+    button(app, "Run optimization").click().run()
+    assert not app.exception
+    runs = app.session_state.workspace["optimization"]["runs"]
+    assert len(runs) == 2 and runs[1].outcomes[0].gross_revenue > runs[0].outcomes[0].gross_revenue
+
+    payloads = []
+
+    def capture_plan():
+        plan, errors = validated_plan()
+        payloads.append(export_plan(plan))
+        return plan, errors
+
+    with monkeypatch.context() as patch:
+        patch.setattr("ui.state.validated_plan", capture_plan)
+        app.switch_page("pages/reports.py").run()
+    restored_plan = load_plan(payloads[0])
+    assert restored_plan.optimization.runs == tuple(runs)
+    monkeypatch.setattr("ui.state.demo_plan", lambda: restored_plan)
+    restored = resume_workspace(load_demonstration()).switch_page("pages/optimization.py").run()
+    assert widget(restored.multiselect, "Eligible crops for East Bench").value == [("barley",)]
+    assert widget(restored.number_input, "Alternative seasonal ET for Barley, grain (in)").value == 21.7
+    assert widget(restored.number_input, "Sale price ($/unit) for Barley, grain").value == 12.0
+    widget(restored.selectbox, "Optimization run").set_value(runs[0].id).run()
+    button(restored, "Load this run’s inputs").click().run()
+    assert widget(restored.number_input, "Sale price ($/unit) for Barley, grain").value == 10.0
+    assert not restored.exception
 
 
 def test_field_details_opens_a_focused_editor_for_the_selected_alternative():

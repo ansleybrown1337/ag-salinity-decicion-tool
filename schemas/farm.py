@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from config.branding import VERSION
 from models.crop_response import target_ece
@@ -162,6 +162,7 @@ class Scenario(Record):
     id: ShortText
     name: ShortText
     number: Annotated[int, Field(ge=1, strict=True)] | None = Field(default=None, exclude_if=lambda value: value is None)
+    leaching_field_ids: tuple[ShortText, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
     fields: Annotated[tuple[FieldPlan, ...], Field(min_length=1)]
     sources: Annotated[tuple[WaterSource, ...], Field(min_length=1)]
 
@@ -172,9 +173,117 @@ class Scenario(Record):
             if len(ids) != len(set(ids)):
                 raise ValueError(f"Each {label} ID must be unique, ignoring letter case.")
         source_ids = {source.id for source in self.sources}
+        if self.leaching_field_ids is not None:
+            selected = set(self.leaching_field_ids)
+            if len(selected) != len(self.leaching_field_ids) or not selected.issubset({field.id for field in self.fields}):
+                raise ValueError("Leaching selections must identify unique fields in the scenario.")
         for field in self.fields:
             if field.source_id not in source_ids:
                 raise ValueError(f"Assign {field.id} to an existing water source in Farm Setup.")
+        return self
+
+
+CropKey = tuple[str] | tuple[str, str, str]
+
+
+def crop_key(crop: Crop) -> CropKey:
+    if crop.id == "custom":
+        return (crop.id, crop.label.casefold(), crop.endpoint.casefold())
+    return (crop.id,)
+
+
+class OptimizationQuote(Record):
+    crop: Crop
+    unit: Annotated[str, StringConstraints(strip_whitespace=True, max_length=30)] = ""
+    expected_yield: Nonnegative | None = None
+    price: Nonnegative | None = None
+    alternative_et_in: Nonnegative | None = None
+
+
+class OptimizationSettings(Record):
+    starting_plan_id: ShortText
+    eligible: dict[ShortText, tuple[CropKey, ...]]
+    leaching_field_ids: tuple[ShortText, ...]
+    quotes: tuple[OptimizationQuote, ...]
+
+    @model_validator(mode="after")
+    def check_choices(self):
+        if len(self.quotes_by_crop) != len(self.quotes):
+            raise ValueError("Each crop must have one set of price and yield inputs.")
+        if len(set(self.leaching_field_ids)) != len(self.leaching_field_ids):
+            raise ValueError("Each leaching field must be selected only once.")
+        return self
+
+    @property
+    def quotes_by_crop(self):
+        return {crop_key(quote.crop): quote for quote in self.quotes}
+
+
+class OptimizationOutcome(Record):
+    requires_leaching: bool
+    plan: Scenario | None = None
+    gross_revenue: Nonnegative | None = None
+    diagnostics: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def check_result(self):
+        if (self.plan is None) != (self.gross_revenue is None):
+            raise ValueError("An optimization result needs both its plan and gross revenue.")
+        return self
+
+
+class OptimizationRun(Record):
+    id: ShortText
+    completed_at: AwareDatetime
+    model_version: ShortText
+    settings: OptimizationSettings
+    starting_plan: Scenario
+    starting_revenue: Nonnegative
+    baseline: Scenario | None = None
+    baseline_revenue: Nonnegative | None = None
+    outcomes: Annotated[tuple[OptimizationOutcome, ...], Field(min_length=1, max_length=2)]
+
+    @model_validator(mode="after")
+    def check_comparison(self):
+        if (self.baseline is None) != (self.baseline_revenue is None):
+            raise ValueError("A baseline comparison needs both its plan and gross revenue.")
+        if self.settings.starting_plan_id != self.starting_plan.id:
+            raise ValueError("Optimization inputs must identify the starting plan.")
+        modes = tuple(outcome.requires_leaching for outcome in self.outcomes)
+        expected = (False, True) if self.settings.leaching_field_ids else (False,)
+        if modes != expected:
+            raise ValueError("Optimization results must match the selected leaching modes.")
+        field_ids = {field.id for field in self.starting_plan.fields}
+        if field_ids != self.settings.eligible.keys() or not set(self.settings.leaching_field_ids) <= field_ids:
+            raise ValueError("Optimization field selections must match the starting plan.")
+        used_crops = {key for keys in self.settings.eligible.values() for key in keys}
+        plans = [self.starting_plan, *(outcome.plan for outcome in self.outcomes if outcome.plan)]
+        if self.baseline:
+            plans.append(self.baseline)
+        used_crops.update(crop_key(field.crop) for plan in plans for field in plan.fields)
+        quotes = self.settings.quotes_by_crop
+        if any(key not in quotes or quotes[key].expected_yield is None or quotes[key].price is None or not quotes[key].unit
+               for key in used_crops):
+            raise ValueError("A completed run must include price, yield, and sale units for every crop it used.")
+        for outcome in self.outcomes:
+            required = self.settings.leaching_field_ids if outcome.requires_leaching else ()
+            if outcome.plan and (outcome.plan.leaching_field_ids != required
+                                 or {field.id for field in outcome.plan.fields} != field_ids):
+                raise ValueError("Optimized field and leaching selections must match the completed run.")
+        return self
+
+
+class OptimizationArchive(Record):
+    starting_plan_id: ShortText | None = None
+    inputs: tuple[OptimizationSettings, ...] = ()
+    runs: tuple[OptimizationRun, ...] = ()
+
+    @model_validator(mode="after")
+    def check_ids(self):
+        if len({settings.starting_plan_id for settings in self.inputs}) != len(self.inputs):
+            raise ValueError("Optimization inputs must be unique per starting plan.")
+        if len({run.id for run in self.runs}) != len(self.runs):
+            raise ValueError("Optimization run IDs must be unique.")
         return self
 
 
@@ -187,6 +296,7 @@ class FarmPlan(Record):
     active_scenario_id: ShortText
     scenarios: Annotated[tuple[Scenario, ...], Field(min_length=1)]
     references: dict[str, Reference]
+    optimization: OptimizationArchive | None = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="before")
     @classmethod
@@ -279,3 +389,8 @@ def farm_plan_filename(timestamp: datetime | None = None) -> str:
     """Name an export with the version and a filename-safe local timestamp."""
     timestamp = timestamp if timestamp is not None else datetime.now().astimezone()
     return f"ag-salinity-farm-plan_v{VERSION}_{timestamp:%Y-%m-%d_%H%M%S%z}.json"
+
+
+def report_filename(report: str, timestamp: datetime | None = None) -> str:
+    timestamp = timestamp if timestamp is not None else datetime.now().astimezone()
+    return f"ag-salinity-{report}_v{VERSION}_{timestamp:%Y-%m-%d_%H%M%S%z}.pdf"

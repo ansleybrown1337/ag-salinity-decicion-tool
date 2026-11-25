@@ -35,10 +35,10 @@ with st.container(horizontal=True):
         st.switch_page("pages/optimization.py")
 
 st.header("Water")
-balance = result.field_balance_af
-short_sources = [item for item in result.sources if item.shortfall_af > 1e-8]
+balance = result.planned_balance_af
+short_sources = [item for item in result.sources if item.planned_shortfall_af > 1e-8]
 source_shortfalls = ", ".join(
-    f"{item.source.id} ({'at least ' if item.demand_af is None else ''}{volume(item.shortfall_af)})"
+    f"{item.source.id} ({'at least ' if item.planned_demand_af is None else ''}{volume(item.planned_shortfall_af)})"
     for item in short_sources
 )
 source_note = f" Shortfalls by source include {plain_text(source_shortfalls)}." if short_sources else ""
@@ -55,23 +55,27 @@ if short_sources:
 
 supply, demand, leaching = st.columns(3)
 supply.metric("Expected farm delivery", volume(result.field_supply_af), help=DELIVERY_HELP)
-demand.metric("Total irrigation demand", volume(result.field_demand_af), help=GROSS_DEMAND_HELP)
+demand.metric("Total irrigation demand", volume(result.planned_demand_af), help=GROSS_DEMAND_HELP)
 leaching.metric(
-    "Extra irrigation for salinity leaching", volume(result.complete_sum("added_leach_field_af")),
+    "Extra irrigation for salinity leaching", volume(result.planned_extra_leaching_af),
     help="Water to apply beyond crop-only irrigation to help maintain the target soil salinity.",
 )
 st.altair_chart(water_demand_chart([farm_water_budget(scenario.name, result)], row_label="Farm plan"), width="stretch")
 
 st.subheader("Can each source cover leaching?")
 sources = source_rows(result)
-st.dataframe(sources, hide_index=True, width="stretch", column_order=[
-    "Source ID", "Expected farm delivery (AF)", "Crop-only irrigation (AF)", "Extra leaching needed (AF)",
-    "Leaching gap (AF)", "Leaching coverage",
-], column_config={
-    key: st.column_config.NumberColumn(format="%.1f") for key in sources[0] if key.endswith("(AF)")
-})
+source_colors = {
+    "Covers crops and leaching": "green", "Short before leaching": "red", "Covers crops with a leaching gap": "red",
+}
+for source in result.sources:
+    name, estimates, leaching = st.columns([2, 3, 2], vertical_alignment="center")
+    name.markdown(f"**{plain_text(source.source.id)}**")
+    estimates.caption(f"Delivery {volume(source.source.delivery_af)} · Crop irrigation {volume(source.crop_only_af)}")
+    estimates.badge(source.leaching_status, color=source_colors.get(source.leaching_status, "gray"))
+    leaching.caption(f"Extra leaching needed {volume(source.extra_leaching_af)}")
+    leaching.caption(f"Leaching gap {volume(source.leaching_gap_af)}")
 st.caption(
-    "The leaching gap is the additional irrigation still needed after covering crop demand at that source. "
+    "Source coverage asks whether delivery could cover crops and leaching for all fields at that source. "
     "Coverage is a planning check for maintaining the stated soil target under the model’s drainage assumptions."
 )
 
@@ -87,6 +91,7 @@ else:
 st.caption("Estimated yield retained and lost at the entered root-zone salinity, as percentages of each crop’s potential.")
 st.altair_chart(field_yield_chart(ordered_fields), width="stretch")
 sources_by_id = {item.source.id: item for item in result.sources}
+field_colors = {"Salinity leaching covered": "green", "Leaching gap": "red", "Field allocation needed": "orange"}
 for item in ordered_fields:
     field = item.field
     name, estimates, details = st.columns([2, 3, 2], vertical_alignment="center")
@@ -97,8 +102,7 @@ for item in ordered_fields:
         f"{item.current_yield_pct:.1f}% yield retained · {100 - item.current_yield_pct:.1f}% lost"
     )
     status = sources_by_id[item.source.id].field_leaching_status(item)
-    color = {"Maintenance leaching covered": "green", "Leaching gap": "red", "Field allocation needed": "orange"}
-    estimates.badge(status, color=color.get(status, "gray"))
+    estimates.badge(status, color=field_colors.get(status, "gray"))
     if details.button("View field details", key=f"dashboard-field/{field.id}"):
         st.session_state.selected_field = field.id.casefold()
         st.switch_page("pages/field_decisions.py")

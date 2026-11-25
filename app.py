@@ -16,6 +16,7 @@ dashboard = st.Page("pages/farm_dashboard.py", title="Farm Dashboard")
 scenarios = st.Page("pages/scenarios.py", title="What-If Scenarios")
 fields = st.Page("pages/field_decisions.py", title="Field Details")
 optimization = st.Page("pages/optimization.py", title="Optimization")
+reports = st.Page("pages/reports.py", title="Download Full Report")
 about = st.Page("pages/about.py", title="About & Methods")
 
 navigation = [
@@ -25,6 +26,7 @@ navigation = [
     (scenarios, "3. What-If Scenarios"),
     (fields, "4. Field Details"),
     (optimization, "5. Optimization"),
+    (reports, "6. Download Full Report"),
     (about, "About & Methods"),
 ]
 page = st.navigation([item for item, _ in navigation], position="hidden")

@@ -66,22 +66,31 @@ for scenario_id in shown:
             "Scenario": label, "Scenario name": draft["name"], "Total irrigation (AF)": None,
             "Expected farm delivery (AF)": None,
             "Farm balance (AF)": None, "Known source shortfall (AF)": None, "Crop plan": "",
-            "Water supply assessment": "Review field and water inputs", "Leaching coverage by source": "",
+            "Water supply assessment": "Review field and water inputs", "Fields budgeted for leaching": "",
+            "Source capacity for all-field leaching": "",
             "Fields with notes": None,
         })
         continue
     result = evaluate_scenario(scenario)
+    if result.planned_shortfall_af > 1e-8:
+        assessment = "At least one water source falls short of planned irrigation."
+    elif result.planned_demand_af is None:
+        assessment = "Planned irrigation is undetermined."
+    else:
+        assessment = "Expected delivery covers planned irrigation at every source."
     crops = Counter()
     for field in scenario.fields:
         crops[field.crop.label] += field.acres
     budgets.append({**farm_water_budget(label, result), "Scenario name": scenario.name})
     comparison.append({
         "Scenario": label, "Scenario name": scenario.name,
-        "Total irrigation (AF)": result.field_demand_af, "Expected farm delivery (AF)": result.field_supply_af,
-        "Farm balance (AF)": result.field_balance_af, "Known source shortfall (AF)": result.source_shortfall_af,
+        "Total irrigation (AF)": result.planned_demand_af, "Expected farm delivery (AF)": result.field_supply_af,
+        "Farm balance (AF)": result.planned_balance_af, "Known source shortfall (AF)": result.planned_shortfall_af,
         "Crop plan": " · ".join(f"{crop} ({acres:g} ac)" for crop, acres in sorted(crops.items())),
-        "Water supply assessment": result.allocation_conclusion,
-        "Leaching coverage by source": "; ".join(
+        "Water supply assessment": assessment,
+        "Fields budgeted for leaching": ("All fields" if scenario.leaching_field_ids is None
+                                         else ", ".join(scenario.leaching_field_ids) or "None selected"),
+        "Source capacity for all-field leaching": "  ·  ".join(
             f"{source.source.id} · {source.leaching_status}" for source in result.sources
         ),
         "Fields with notes": result.salinity_concerns,
@@ -89,7 +98,7 @@ for scenario_id in shown:
 if budgets:
     st.altair_chart(water_demand_chart(budgets, row_label="Scenario", details=("Scenario name",)), width="stretch")
     st.caption(
-        "Ticks mark expected farm delivery. Water remaining is the positive farm-wide balance. "
+        "Bars show planned irrigation. Ticks mark expected farm delivery. Water remaining is the positive farm-wide balance. "
         "Check the source shortfall column to see whether an individual source falls short."
     )
 if comparison:
@@ -204,7 +213,8 @@ if editor := st.session_state.get(editor_key):
                         field_alternative(field, **revised[field.id]) if field.id in revised else field
                         for field in template.fields
                     ]
-                    saved = save_scenario(editor["id"], name, changed_fields, template.sources)
+                    saved = save_scenario(editor["id"], name, changed_fields, template.sources,
+                                          leaching_field_ids=template.leaching_field_ids)
                 except ValueError as error:
                     errors_panel([str(error)])
                 else:

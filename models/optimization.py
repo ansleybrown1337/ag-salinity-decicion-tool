@@ -10,7 +10,27 @@ from scipy.sparse import coo_array
 
 from models.validation import finite
 from models.water_budget import WATER_TOLERANCE_AF, FieldResult, evaluate_field
-from schemas.farm import FieldPlan, WaterSource
+from schemas.farm import FieldPlan, OptimizationRun, WaterSource, crop_key
+
+MODE = {False: "Highest gross revenue", True: "Revenue with required leaching"}
+
+
+def reference_label(name, farm_result):
+    return f"{name} (exceeds available water)" if crop_shortfalls(farm_result) else name
+
+
+def crop_shortfalls(farm_result):
+    return {
+        row.source.id: row.crop_only_af - row.source.delivery_af
+        for row in farm_result.sources if row.crop_only_af - row.source.delivery_af > WATER_TOLERANCE_AF
+    }
+
+
+def excluded_starting_crops(run: OptimizationRun):
+    return {
+        field.id: field.crop.label for field in run.starting_plan.fields
+        if crop_key(field.crop) not in run.settings.eligible.get(field.id, ())
+    }
 
 
 @dataclass(frozen=True)
@@ -47,20 +67,23 @@ def crop_option(field: FieldPlan, source: WaterSource, expected_yield: float, pr
 
 
 def optimize_crop_plan(
-    fields: dict[str, list[CropOption]], sources: tuple[WaterSource, ...], *, require_leaching: bool,
+    fields: dict[str, list[CropOption]], sources: tuple[WaterSource, ...], *, leaching_fields: frozenset[str],
 ) -> OptimizationResult:
     """Choose one crop per field under the independently assigned source budgets."""
     source_by_id = {source.id: source for source in sources}
     usable = {}
     minima = {key: [] for key in source_by_id}
     issues = []
+    if not leaching_fields.issubset(fields):
+        raise ValueError("Choose leaching fields from the starting plan.")
     for field_id, options in fields.items():
+        require_leaching = field_id in leaching_fields
         feasible = [
             (option, water) for option in options if (water := option.required_water(require_leaching)) is not None
         ]
         if not feasible:
             if options:
-                issues.append(f"{field_id} ({options[0].result.source.id}) has no eligible crop with an assessable maintenance estimate.")
+                issues.append(f"{field_id} ({options[0].result.source.id}) has no eligible crop with an assessable leaching requirement.")
             else:
                 issues.append(f"{field_id} has no eligible crop with complete inputs.")
             continue

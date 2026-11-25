@@ -19,13 +19,23 @@ SCENARIO_DASHES = ([1, 0], [7, 4], [3, 3], [10, 3, 2, 3])
 
 
 def farm_water_budget(name, result):
-    balance = result.field_balance_af
+    balance = result.planned_balance_af
     return {
         "Plan": name, "Crop-only (AF)": result.complete_sum("crop_only_af"),
-        "Extra leaching (AF)": result.complete_sum("added_leach_field_af"),
+        "Extra leaching (AF)": result.planned_extra_leaching_af,
         "Delivery (AF)": result.field_supply_af,
         "Water remaining (AF)": balance if balance is not None and balance > 1e-8 else None,
     }
+
+
+def revenue_comparison_chart(rows):
+    order = [row["Plan"] for row in rows]
+    return alt.Chart(pd.DataFrame(rows)).mark_bar(size=20).encode(
+        y=alt.Y("Plan:N", sort=order, title=None, axis=alt.Axis(labelLimit=310)),
+        x=alt.X("Revenue:Q", title="Estimated gross revenue ($)", axis=alt.Axis(format="$,.0f")),
+        color=alt.condition("datum.Benchmark", alt.value(BROWN), alt.value(LIGHT_GREEN)),
+        tooltip=["Plan:N", alt.Tooltip("Revenue:Q", title="Estimated gross revenue", format="$,.0f")],
+    ).properties(height=alt.Step(36))
 
 
 def water_demand_chart(budgets, *, row_label, details=()):

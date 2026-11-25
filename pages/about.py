@@ -44,7 +44,7 @@ st.markdown("\n".join(f"- {citation(reference)}" for reference in REFERENCES.val
 st.subheader("Experimental optimization")
 st.write(
     "Optimization tests eligible crops against source-specific water budgets and compares estimated gross revenue "
-    "with and without the maintenance leaching constraint. Soil salinity targets are held fixed across candidates. "
+    "with and without requiring adequate salinity leaching on selected fields. Each candidate uses its crop’s salinity threshold. "
     "Revenue uses the entered price, expected yield without salinity stress and modeled yield at current soil salinity."
 )
 st.markdown("[SciPy mixed-integer linear programming](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html)")

@@ -146,7 +146,8 @@ def selected_table_row(rows, *, key, column_config=None):
 def download_farm_plan(plan):
     st.download_button(
         "Download Farm Plan (.json)", export_plan(plan), farm_plan_filename(), "application/json",
-        help="Includes all saved scenarios. The filename shows the model version and local date and time.",
+        help="Includes saved scenarios, entered optimization inputs, and completed runs. "
+             "The filename shows the model version and local date and time.",
     )
 
 
@@ -181,6 +182,7 @@ def source_rows(result):
             "Assigned fields": ", ".join(item.field.id for item in row.fields),
             "Crop-only irrigation (AF)": row.crop_only_af, "Extra leaching needed (AF)": row.extra_leaching_af,
             "Leaching gap (AF)": row.leaching_gap_af, "Leaching coverage": row.leaching_status,
+            "Planned irrigation (AF)": row.planned_demand_af,
             "Demand (AF)": row.demand_af, "Known demand (AF)": row.known_demand_af,
             "Balance (AF)": row.balance_af, "Assessment": row.assessment,
         }

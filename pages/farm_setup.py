@@ -100,6 +100,8 @@ if fields:
         st.session_state[editing] = selected_key
     if delete.button("Delete field", disabled=selected is None, width="stretch") and selected is not None:
         fields.remove(selected)
+        if scenario.get("leaching_field_ids") is not None:
+            scenario["leaching_field_ids"] = tuple(key for key in scenario["leaching_field_ids"] if key != selected["id"])
         close_editor()
         reset_entry(table_revision)
 
@@ -112,7 +114,12 @@ if fields:
             save, cancel = st.columns(2)
             if save.button("Save field changes", type="primary"):
                 try:
-                    save_entry(fields, field_model(changes), selected)
+                    revised = field_model(changes)
+                    save_entry(fields, revised, selected)
+                    if scenario.get("leaching_field_ids") is not None:
+                        scenario["leaching_field_ids"] = tuple(
+                            revised.id if key == selected["id"] else key for key in scenario["leaching_field_ids"]
+                        )
                 except ValueError as error:
                     errors_panel(describe_errors(error))
                 else:
